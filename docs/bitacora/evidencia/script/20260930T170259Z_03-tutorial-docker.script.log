@@ -1,0 +1,333 @@
+Script started on 2026-09-30 19:02:59+02:00 [TERM="xterm-256color" TTY="/dev/pts/4" COLUMNS="102" LINES="57"]
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker version[27mdocker version
+[?2004lClient:
+ Version:           29.8.1
+ API version:       1.56
+ Go version:        go1.26.8
+ Git commit:        4a63305
+ Built:             Tue Sep 15 16:24:42 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server: Docker Desktop 4.93.0 (240920)
+ Engine:
+  Version:          29.8.1
+  API version:      1.56 (minimum version 1.40)
+  Go version:       go1.26.8
+  Git commit:       464cd50
+  Built:            Tue Sep 15 16:25:38 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.3.5
+  GitCommit:        1294c24a7da8e5a793ed378161673abe94118892
+ runc:
+  Version:          1.5.1
+  GitCommit:        v1.5.1-0-g8f2685a4
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker info[27mdocker info
+[?2004lClient:
+ Version:    29.8.1
+ Context:    default
+ Debug Mode: false
+ Plugins:
+  agent: Docker AI Agent Runner (Docker Inc.)
+    Version:  v1.141.0
+    Path:     /usr/local/lib/docker/cli-plugins/docker-agent
+  ai: Docker AI Agent - Ask Gordon (Docker Inc.)
+    Version:  v1.31.0
+    Path:     /usr/local/lib/docker/cli-plugins/docker-ai
+  buildx: Docker Buildx (Docker Inc.)
+    Version:  v0.37.1
+    Path:     /usr/local/lib/docker/cli-plugins/docker-buildx
+  compose: Docker Compose (Docker Inc.)
+    Version:  v5.5.1
+    Path:     /usr/local/lib/docker/cli-plugins/docker-compose
+  debug: Get a shell into any image or container (Docker Inc.)
+    Version:  0.0.47
+    Path:     /usr/local/lib/docker/cli-plugins/docker-debug
+  desktop: Docker Desktop commands (Docker Inc.)
+    Version:  v0.4.4
+    Path:     /usr/local/lib/docker/cli-plugins/docker-desktop
+  dhi: CLI for managing Docker Hardened Images (Docker Inc.)
+    Version:  v0.0.7
+    Path:     /usr/local/lib/docker/cli-plugins/docker-dhi
+  extension: Manages Docker extensions (Docker Inc.)
+    Version:  v0.2.31
+    Path:     /usr/local/lib/docker/cli-plugins/docker-extension
+  init: Creates Docker-related starter files for your project (Docker Inc.)
+    Version:  v1.4.0
+    Path:     /usr/local/lib/docker/cli-plugins/docker-init
+  mcp: Docker MCP Plugin (Docker Inc.)
+    Version:  v0.43.3
+    Path:     /usr/local/lib/docker/cli-plugins/docker-mcp
+  model: Docker Model Runner (Docker Inc.)
+    Version:  v1.2.6
+    Path:     /usr/local/lib/docker/cli-plugins/docker-model
+  offload: Docker Offload (Docker Inc.)
+    Version:  v0.6.33
+    Path:     /usr/local/lib/docker/cli-plugins/docker-offload
+  pass: Docker Pass Secrets Manager Plugin (beta) (Docker Inc.)
+    Version:  v0.2.2
+    Path:     /usr/local/lib/docker/cli-plugins/docker-pass
+  sandbox: "docker sandbox" is deprecated, use Docker Sandboxes instead (Docker Inc.)
+    Version:  v0.13.0
+    Path:     /usr/local/lib/docker/cli-plugins/docker-sandbox
+  scout: Docker Scout (Docker Inc.)
+    Version:  v1.24.0
+    Path:     /usr/local/lib/docker/cli-plugins/docker-scout
+
+Server:
+ Containers: 0
+  Running: 0
+  Paused: 0
+  Stopped: 0
+ Images: 0
+ Server Version: 29.8.1
+ Storage Driver: overlayfs
+  driver-type: io.containerd.snapshotter.v1
+ Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 2
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local splunk syslog
+ CDI spec directories:
+  /etc/cdi
+  /var/run/cdi
+ Discovered Devices:
+  cdi: docker.com/gpu=webgpu
+ Swarm: inactive
+ Runtimes: io.containerd.runc.v2 nvidia runc
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: 1294c24a7da8e5a793ed378161673abe94118892
+ runc version: v1.5.1-0-g8f2685a4
+ init version: de40ad0
+ Security Options:
+  seccomp
+   Profile: builtin
+  cgroupns
+ Kernel Version: 6.18.33.2-microsoft-standard-WSL2
+ Operating System: Docker Desktop
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 4
+ Total Memory: 5.788GiB
+ Name: docker-desktop
+ ID: 32cfeb52-772e-4d87-af9c-74b928601bbe
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ HTTP Proxy: http.docker.internal:3128
+ HTTPS Proxy: http.docker.internal:3128
+ No Proxy: hubproxy.docker.internal
+ Labels:
+  com.docker.desktop.address=unix:///var/run/docker-cli.sock
+ Experimental: false
+ Insecure Registries:
+  hubproxy.docker.internal:5555
+  127.0.0.0/8
+  ::1/128
+ Live Restore Enabled: false
+ Firewall Backend: iptables
+
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker run hello-world[27mdocker run hello-world
+[?2004lUnable to find image 'hello-world:latest' locally
+/usr/bin/docker-credential-desktop.exe: Invalid argument
+docker: error getting credentials - err: exit status 1, out: ``
+
+Run 'docker run --help' for more information
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker ps[27mdocker ps
+[?2004lCONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker ps -a[27mdocker ps -a
+[?2004lCONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker run hello-world[27mdocker run hello-world
+[?2004lUnable to find image 'hello-world:latest' locally
+/usr/bin/docker-credential-desktop.exe: Invalid argument
+docker: error getting credentials - err: exit status 1, out: ``
+
+Run 'docker run --help' for more information
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker ps -a[27mdocker ps -a
+[?2004lCONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mcat ~/.docker/config.json[27mcat ~/.docker/config.json
+[?2004l{
+  "credsStore": "desktop.exe"
+}
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker info 2>&1 | head -n 20[27mdocker info 2>&1 | head -n 20
+[?2004lClient:
+ Version:    29.8.1
+ Context:    default
+ Debug Mode: false
+ Plugins:
+  agent: Docker AI Agent Runner (Docker Inc.)
+    Version:  v1.141.0
+    Path:     /usr/local/lib/docker/cli-plugins/docker-agent
+  ai: Docker AI Agent - Ask Gordon (Docker Inc.)
+    Version:  v1.31.0
+    Path:     /usr/local/lib/docker/cli-plugins/docker-ai
+  buildx: Docker Buildx (Docker Inc.)
+    Version:  v0.37.1
+    Path:     /usr/local/lib/docker/cli-plugins/docker-buildx
+  compose: Docker Compose (Docker Inc.)
+    Version:  v5.5.1
+    Path:     /usr/local/lib/docker/cli-plugins/docker-compose
+  debug: Get a shell into any image or container (Docker Inc.)
+    Version:  0.0.47
+    Path:     /usr/local/lib/docker/cli-plugins/docker-debug
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mcp ~/.docker/config.json ~/.docker/config.json.bak[27m[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Ccp ~/.docker/config.json ~/.docker/config.json.bak
+[?2004l[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mprintf '{\n}\n' > ~/.docker/config.json[27mprintf '{\n}\n' > ~/.docker/config.json
+[?2004l[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mcat ~/.docker/config.json[27mcat ~/.docker/config.json
+[?2004l{
+}
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker run hello-world[27mdocker run hello-world
+[?2004lUnable to find image 'hello-world:latest' locally
+latest: Pulling from library/hello-world
+
+[1A[2K4f55086f7dd0: Pulling fs layer [1B
+[1A[2Kd5e71e642bf5: Download complete [1B[2A[2K4f55086f7dd0: Download complete [2B[2A[2K4f55086f7dd0: Pull complete [2BDigest: sha256:5e23090353324d887c48ad5e5c56d294eab81588df9605b07d1afe895f9cc8f8
+Status: Downloaded newer image for hello-world:latest
+
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+
+To generate this message, Docker took the following steps:
+ 1. The Docker client contacted the Docker daemon.
+ 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+    (amd64)
+ 3. The Docker daemon created a new container from that image which runs the
+    executable that produces the output you are currently reading.
+ 4. The Docker daemon streamed that output to the Docker client, which sent it
+    to your terminal.
+
+To try something more ambitious, you can run an Ubuntu container with:
+ $ docker run -it ubuntu bash
+
+Share images, automate workflows, and more with a free Docker ID:
+ https://hub.docker.com/
+
+For more examples and ideas, visit:
+ https://docs.docker.com/get-started/
+
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker ps -a[27mdocker ps -a
+[?2004lCONTAINER ID   IMAGE         COMMAND    CREATED         STATUS                     PORTS     NAMES
+560bce4cc910   hello-world   "/hello"   2 minutes ago   Exited (0) 2 minutes ago             infallible_williamson
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker pull alpine:3.20[27mdocker pull alpine:3.20
+[?2004l3.20: Pulling from library/alpine
+
+[1A[2K25f1d6b1951a: Pulling fs layer [1B
+[1A[2Kd4050d56ebf2: Downloading  73.69kB/73.69kB[1B
+[1A[2K3a030ca3f633: Download complete [1B[2A[2Kd4050d56ebf2: Download complete [2B[3A[2K25f1d6b1951a: Downloading  1.049MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  1.049MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  1.049MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  1.049MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  1.049MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  1.049MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  2.097MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  2.097MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  2.097MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  2.097MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  2.097MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  2.097MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  2.097MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  3.146MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  3.146MB/3.63MB[3B[3A[2K25f1d6b1951a: Downloading  3.146MB/3.63MB[3B[3A[2K25f1d6b1951a: Download complete [3B[3A[2K25f1d6b1951a: Extracting 1 s[3B[3A[2K25f1d6b1951a: Pull complete [3BDigest: sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+Status: Downloaded newer image for alpine:3.20
+docker.io/library/alpine:3.20
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker images[27mdocker images
+[?2004l                                                                                  [1m[106m[30mi[0m[0m [96mInfo → [0m[0m [38;5;0m[48;5;14m U [0m In Use
+[39m[1mIMAGE[0m                [39m[1mID[0m             [39m[1mDISK USAGE[0m   [39m[1mCONTENT SIZE[0m   [39m[1mEXTRA[0m
+[34m[1malpine:3.20[0m          [39md9e853e87e55[0m       [39m12.2MB[0m         [39m3.71MB[0m        
+[34m[1mhello-world:latest[0m   [39m5e2309035332[0m       [39m25.9kB[0m         [39m9.49kB[0m   [38;5;0m[48;5;14m U [0m  
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker run -it --name prueba alpine:3.20 sh[27mdocker run -it --name prueba alpine:3.20 sh
+[?2004l/ # [6ncat /etc/os-release
+NAME="Alpine Linux"
+ID=alpine
+VERSION_ID=3.20.10
+PRETTY_NAME="Alpine Linux v3.20"
+HOME_URL="https://alpinelinux.org/"
+BUG_REPORT_URL="https://gitlab.alpinelinux.org/alpine/aports/-/issues"
+/ # [6nhostname
+561a84e0729d
+/ # [6nls /
+[1;34mbin[m    [1;34metc[m    [1;34mlib[m    [1;34mmnt[m    [1;34mproc[m   [1;34mrun[m    [1;34msrv[m    [1;34mtmp[m    [1;34mvar[m
+[1;34mdev[m    [1;34mhome[m   [1;34mmedia[m  [1;34mopt[m    [1;34mroot[m   [1;34msbin[m   [1;34msys[m    [1;34musr[m
+/ # [6nexit
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mexit[27m[1Pexi[K[K[K[7mdocker ps -a --filter "name=prueba"[27mdocker ps -a --filter "name=prueba"
+[?2004lCONTAINER ID   IMAGE         COMMAND   CREATED          STATUS                      PORTS     NAMES
+561a84e0729d   alpine:3.20   "sh"      46 seconds ago   Exited (0) 17 seconds ago             prueba
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker start -ai prueba[27mdocker start -ai prueba
+[?2004l/ # [6necho "dato importante" > /tmp/nota.txt
+/ # [6ncat /tmp/nota.txt
+dato importante
+/ # [6nexit
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ v[K[7mdocker rm prueba[27mdocker rm prueba
+[?2004lprueba
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker run -it --name prueba2 alpine:3.20 sh[27mdocker run -it --name prueba2 alpine:3.20 sh
+[?2004l/ # [6ncat /tmp/nota.txt
+cat: can't open '/tmp/nota.txt': No such file or directory
+/ # [6ncat /tmp/nota.txt/ # cat /tmp/nota.txt[J[J[J[J[J[J[J[J[J[J[J[J[J[J[J[J[J[Jexit
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker volume create datos-prueba[27mdocker volume create datos-prueba
+[?2004ldatos-prueba
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker run -it --rm -v datos-prueba:/datos alpine:3.20 sh[27m[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cdocker run -it --rm -v datos-prueba:/datos alpine:3.20 sh
+[?2004l/ # [6necho "dato importante" > /datos/nota.txt
+/ # [6ncat /datos/nota.txt
+dato importante
+/ # [6nexit
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker run -it --rm -v datos-prueba:/datos alpine:3.20 sh[27m[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cdocker run -it --rm -v datos-prueba:/datos alpine:3.20 sh
+[?2004l/ # [6ncat /datos/nota.txt
+dato importante
+/ # [6nexit
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker volume ls[27mdocker volume ls
+[?2004lDRIVER    VOLUME NAME
+local     datos-prueba
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker volume inspect datos-prueba[27mdocker volume inspect datos-prueba
+[?2004l[
+    {
+        "CreatedAt": "2026-09-30T17:20:10Z",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/datos-prueba/_data",
+        "Name": "datos-prueba",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker run -d --name web -p 8080:80 nginx:alpine[27m[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cdocker run -d --name web -p 8080:80 nginx:alpine
+[?2004lUnable to find image 'nginx:alpine' locally
+alpine: Pulling from library/nginx
+
+[1A[2Ke72112c14215: Pulling fs layer [1B
+[1A[2Ke2de96513ba9: Pulling fs layer [1B
+[1A[2Kd9aae54b5831: Pulling fs layer [1B
+[1A[2K6c53d0b2a666: Pulling fs layer [1B
+[1A[2K64c8194480fe: Pulling fs layer [1B
+[1A[2K9a9a644fdd6a: Pulling fs layer [1B
+[1A[2K745dfb2690dd: Pulling fs layer [1B
+[1A[2Ke76228b47809: Pulling fs layer [1B
+[1A[2K0deea27e58d9: Downloading  22.54kB/22.54kB[1B[1A[2K0deea27e58d9: Download complete [1B[4A[2K9a9a644fdd6a: Download complete [4B[2A[2Ke76228b47809: Download complete [2B
+[1A[2Kd54d3939625e: Downloading  868.5kB/868.5kB[1B[1A[2Kd54d3939625e: Download complete [1B[4A[2K745dfb2690dd: Downloading     965B/965B[4B[4A[2K745dfb2690dd: Download complete [4B[10A[2Ke72112c14215: Downloading  1.049MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  1.049MB/20.53MB[10B[7A[2K6c53d0b2a666: Download complete [7B[10A[2Ke72112c14215: Downloading  1.049MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  2.097MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  2.097MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  2.097MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  1.049MB/3.85MB[9B[9A[2Ke2de96513ba9: Downloading  1.049MB/3.85MB[9B[10A[2Ke72112c14215: Downloading  2.097MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  1.049MB/3.85MB[9B[10A[2Ke72112c14215: Downloading  3.146MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  3.146MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  1.049MB/3.85MB[9B[9A[2Ke2de96513ba9: Downloading  1.049MB/3.85MB[9B[10A[2Ke72112c14215: Downloading  3.146MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  1.049MB/3.85MB[9B[10A[2Ke72112c14215: Downloading  3.146MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  1.049MB/3.85MB[9B[10A[2Ke72112c14215: Downloading  4.194MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  1.049MB/3.85MB[9B[10A[2Ke72112c14215: Downloading  4.194MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  4.194MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  5.243MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  5.243MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  5.243MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  5.243MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  5.243MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  5.243MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  5.243MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  6.291MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  6.291MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  6.291MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  6.291MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  6.291MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  6.291MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  2.097MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.049MB/1.931MB[8B[10A[2Ke72112c14215: Downloading  6.291MB/20.53MB[10B[10A[2Ke72112c14215: Downloading   7.34MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  3.146MB/3.85MB[9B[8A[2Kd9aae54b5831: Downloading  1.931MB/1.931MB[8B[10A[2Ke72112c14215: Downloading   7.34MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  3.146MB/3.85MB[9B[8A[2Kd9aae54b5831: Download complete [8B[10A[2Ke72112c14215: Downloading   7.34MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  3.146MB/3.85MB[9B[10A[2Ke72112c14215: Downloading  8.389MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  3.146MB/3.85MB[9B[6A[2K64c8194480fe: Downloading   1.21kB/1.21kB[6B[9A[2Ke2de96513ba9: Downloading  3.146MB/3.85MB[9B[6A[2K64c8194480fe: Download complete [6B[10A[2Ke72112c14215: Downloading  8.389MB/20.53MB[10B[9A[2Ke2de96513ba9: Downloading  3.146MB/3.85MB[9B[10A[2Ke72112c14215: Downloading  8.389MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  8.389MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  9.437MB/20.53MB[10B[9A[2Ke2de96513ba9: Download complete [9B[9A[2Ke2de96513ba9: Extracting 1 s[9B[10A[2Ke72112c14215: Downloading  9.437MB/20.53MB[10B[8A[2Kd9aae54b5831: Extracting 1 s[8B[9A[2Ke2de96513ba9: Pull complete [9B[10A[2Ke72112c14215: Downloading  10.49MB/20.53MB[10B[8A[2Kd9aae54b5831: Extracting 1 s[8B[10A[2Ke72112c14215: Downloading  10.49MB/20.53MB[10B[4A[2K745dfb2690dd: Pull complete [4B[7A[2K6c53d0b2a666: Pull complete [7B[8A[2Kd9aae54b5831: Pull complete [8B[10A[2Ke72112c14215: Downloading  10.49MB/20.53MB[10B[5A[2K9a9a644fdd6a: Pull complete [5B[3A[2Ke76228b47809: Pull complete [3B[6A[2K64c8194480fe: Pull complete [6B[10A[2Ke72112c14215: Downloading  11.53MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  11.53MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  12.58MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  12.58MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  13.63MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  13.63MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  14.68MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  14.68MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  14.68MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  15.73MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  15.73MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  16.78MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  16.78MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  16.78MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  17.83MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  17.83MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  18.87MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  18.87MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  18.87MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  18.87MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  18.87MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  19.92MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  19.92MB/20.53MB[10B[10A[2Ke72112c14215: Downloading  19.92MB/20.53MB[10B[10A[2Ke72112c14215: Download complete [10B[10A[2Ke72112c14215: Extracting 1 s[10B[10A[2Ke72112c14215: Extracting 1 s[10B[10A[2Ke72112c14215: Extracting 1 s[10B[10A[2Ke72112c14215: Extracting 1 s[10B[10A[2Ke72112c14215: Pull complete [10BDigest: sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+Status: Downloaded newer image for nginx:alpine
+d7fcd751a9a9d617138d432d9c43ffdb0e851b4f1ed32146d4f88df12523b539
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker ps[27mdocker ps
+[?2004lCONTAINER ID   IMAGE          COMMAND                  CREATED         STATUS         PORTS                                     NAMES
+d7fcd751a9a9   nginx:alpine   "/docker-entrypoint.…"   6 seconds ago   Up 5 seconds   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   web
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker port web[27mdocker port web
+[?2004l80/tcp -> 0.0.0.0:8080
+80/tcp -> [::]:8080
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker logs --tail 3 web[27mdocker logs --tail 3 web
+[?2004l172.17.0.1 - - [30/Sep/2026:17:23:27 +0000] "GET / HTTP/1.1" 200 896 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36" "-"
+2026/09/30 17:23:27 [error] 30#30: *1 open() "/usr/share/nginx/html/favicon.ico" failed (2: No such file or directory), client: 172.17.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "localhost:8080", referrer: "http://localhost:8080/"
+172.17.0.1 - - [30/Sep/2026:17:23:27 +0000] "GET /favicon.ico HTTP/1.1" 404 555 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36" "-"
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker exec web ls /usr/share/nginx/html[27mdocker exec web ls /usr/share/nginx/html
+[?2004l50x.html
+index.html
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker stats --no-stream web[27mdocker stats --no-stream web
+[?2004lCONTAINER ID   NAME      CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O         PIDS
+d7fcd751a9a9   web       0.00%     5.426MiB / 5.788GiB   0.09%     3.75kB / 3.23kB   1.01MB / 12.3kB   5
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker stop web[27mdocker stop web
+[?2004lweb
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker rm web prueba2 $(docker ps -aq --filter "ancestor=he[27m[7ml[27m[7mlo-world")[27m[A]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ docker rm web prueba2 $(docker ps -aq --filter "ancestor=hello-world")
+[?2004lweb
+prueba2
+560bce4cc910
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker volume rm datos-prueba[27mdocker volume rm datos-prueba
+[?2004ldatos-prueba
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mdocker system df[27mdocker system df
+[?2004lTYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          3         0         106.7MB   106.6MB (99%)
+Containers      0         0         0B        0B
+Local Volumes   0         0         0B        0B
+Build Cache     0         0         0B        0B
+[?2004h]0;capit@PortatilAuxi: ~/oracle-database-lab.[01;32mcapit@PortatilAuxi[00m:[01;34m~/oracle-database-lab.[00m$ [7mexit[27mexit
+[?2004lexit
+
+Script done on 2026-09-30 19:28:45+02:00 [COMMAND_EXIT_CODE="0"]
