@@ -1,0 +1,23 @@
+== 1. Version del motor ==
+
+BANNER_FULL
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Oracle AI Database 26ai Free Release 23.26.3.0.0 - Develop, Learn, and Run for Free
+Version 23.26.3.0.0
+
+
+== 2. Contenedor Oracle actual ==
+
+CON_NAME
+------------------------------
+FREEPDB1
+== 3. Estado de la instancia ==
+
+INSTANCE_NAME	 STATUS
+---------------- ------------
+FREE		 OPEN
+
+== 4. Usuario de aplicacion ALUMNO (para Database Actions) ==
+
+no rows selected
+

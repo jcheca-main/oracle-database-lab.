@@ -1,0 +1,70 @@
+== Esperando a que oralab-26ai este healthy (max. 5 min) ==
+ intento 1: healthy
+== Estado final ==
+oralab-26ai Up 12 minutes (healthy)
+== Registro de arranque (docker logs) ==
+Starting Oracle Net Listener.
+Oracle Net Listener started.
+Starting Oracle AI Database instance FREE.
+Oracle AI Database instance FREE started.
+
+The Oracle base remains unchanged with value /opt/oracle
+
+SQL*Plus: Release 23.26.3.0.0 - Production on Thu Oct 1 12:23:36 2026
+Version 23.26.3.0.0
+
+Copyright (c) 1982, 2026, Oracle.  All rights reserved.
+
+
+Connected to:
+Oracle AI Database 26ai Free Release 23.26.3.0.0 - Develop, Learn, and Run for Free
+Version 23.26.3.0.0
+
+SQL> 
+User altered.
+
+SQL> 
+User altered.
+
+SQL> 
+Session altered.
+
+SQL> 
+User altered.
+
+SQL> Disconnected from Oracle AI Database 26ai Free Release 23.26.3.0.0 - Develop, Learn, and Run for Free
+Version 23.26.3.0.0
+#########################
+DATABASE IS READY TO USE!
+#########################
+The following output is now a tail of the alert.log:
+2026-10-01T12:23:33.886301+00:00
+PDB$SEED(2):Opening pdb with Resource Manager plan: DEFAULT_PLAN
+FREEPDB1(3):Autotune of undo retention is turned on. 
+2026-10-01T12:23:35.633309+00:00
+FREEPDB1(3):Opening pdb with Resource Manager plan: DEFAULT_PLAN
+2026-10-01T12:23:35.918457+00:00
+Completed: Pluggable database FREEPDB1 opened read write 
+Completed: ALTER DATABASE OPEN
+2026-10-01T12:23:37.242370+00:00
+FREEPDB1(3):TABLE AUDSYS.AUD$UNIFIED: ADDED INTERVAL PARTITION SYS_P496 (4476) VALUES LESS THAN (TIMESTAMP' 2026-10-02 00:00:00')
+2026-10-01T12:23:38.214623+00:00
+===========================================================
+Dumping current patch information
+===========================================================
+No patches have been applied
+===========================================================
+2026-10-01T12:23:38.563136+00:00
+FREEPDB1(3):Resize operation completed for file# 13, fname /opt/oracle/oradata/FREE/FREEPDB1/sysaux01.dbf, old size 409600K, new size 419840K
+2026-10-01T12:23:45.934056+00:00
+TABLE SYS.WRP$_REPORTS: ADDED AUTOLIST FRAGMENT SYS_P656 (3) VALUES (( 1509902213, TO_DATE(' 2026-09-28 00:00:00', 'syyyy-mm-dd hh24:mi:ss', 'nls_calendar=gregorian') ))
+TABLE SYS.WRP$_REPORTS_DETAILS: ADDED AUTOLIST FRAGMENT SYS_P657 (3) VALUES (( 1509902213, TO_DATE(' 2026-09-28 00:00:00', 'syyyy-mm-dd hh24:mi:ss', 'nls_calendar=gregorian') ))
+TABLE SYS.WRP$_REPORTS_TIME_BANDS: ADDED AUTOLIST FRAGMENT SYS_P660 (3) VALUES (( 1509902213, TO_DATE(' 2026-09-28 00:00:00', 'syyyy-mm-dd hh24:mi:ss', 'nls_calendar=gregorian') ))
+2026-10-01T12:29:41.252363+00:00
+--ATTENTION--
+Time stalled at 2447456064
+2026-10-01T12:29:45.962559+00:00
+--ATTENTION--
+Time stall, backward drift ended at 1790857785 with drift 4000000
+2026-10-01T12:34:25.558923+00:00
+Resize operation completed for file# 3, fname /opt/oracle/oradata/FREE/sysaux01.dbf, old size 624640K, new size 655360K
