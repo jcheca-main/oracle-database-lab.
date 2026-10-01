@@ -1,0 +1,40 @@
+== 1. Docker ==
+Cliente 29.8.1 / Motor 29.8.1
+== 2. Imagen y digest ==
+REPOSITORY                                    TAG       DIGEST                                                                    IMAGE ID       CREATED        SIZE
+container-registry.oracle.com/database/free   latest    sha256:f988b0c04c4c386cd306a2a914c0d7a9702d83acc31b064a28ad8eb6278a8fba   f988b0c04c4c   2 months ago   13.8GB
+== 3. Contenedor ==
+oralab-26ai Up 4 hours (healthy) 0.0.0.0:1521->1521/tcp, [::]:1521->1521/tcp, 0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp
+== 4. Volumen persistente ==
+DRIVER    VOLUME NAME
+local     oralab-26ai-data
+== 5. Base de datos lista (debe ser 1 o mas) ==
+1
+== 6. Entornos de negocio ==
+
+OWNER
+--------------------------------------------------------------------------------
+    TABLAS
+----------
+ADMIN_ACADEMIA
+	 3
+
+ADMIN_CLINICA
+	 3
+
+ADMIN_FINTECH
+	 2
+
+ADMIN_LOGISTICA
+	 3
+
+ADMIN_RETAIL
+	 3
+
+
+== 7. Java ==
+openjdk version "21.0.12.1" 2026-08-18
+== 8. SQLcl ==
+SQLcl: Release 26.3.0.0 Production Build: 26.3.0.260.1620
+== 9. Secretos fuera de Git ==
+OK: config/.env esta ignorado por Git
