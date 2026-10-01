@@ -1,0 +1,44 @@
+== 1. Java (ORDS requiere 17 o 21) ==
+openjdk version "21.0.12.1" 2026-08-18
+== 2. Programa ORDS en /opt/oracle/ords ==
+
+ORDS: Release 26.3 Production on Thu Oct 01 14:40:47 2026
+
+Copyright (c) 2010, 2026, Oracle.
+
+Configuration:
+  /etc/ords/config
+
+Oracle REST Data Services 26.3.0.r2721811
+== 3. Instalacion en FREEPDB1 (no interactiva) ==
+
+ORDS: Release 26.3 Production on Thu Oct 01 14:40:48 2026
+
+Copyright (c) 2010, 2026, Oracle.
+
+Configuration:
+  /etc/ords/config
+
+Oracle REST Data Services - Non-Interactive Install
+
+Retrieving information.
+The setting named: db.connectionType was set to: basic in configuration: default
+The setting named: db.hostname was set to: localhost in configuration: default
+The setting named: db.port was set to: 1521 in configuration: default
+The setting named: db.servicename was set to: FREEPDB1 in configuration: default
+The setting named: db.username was set to: ORDS_PUBLIC_USER in configuration: default
+The setting named: db.password was set to: ****** in configuration: default
+The setting named: feature.sdw was set to: true in configuration: default
+The global setting named: database.api.enabled was set to: true
+The setting named: restEnabledSql.active was set to: true in configuration: default
+The setting named: security.requestValidationFunction was set to: ords_util.authorize_plsql_gateway in configuration: default
+== 4. Puerto HTTP del modo standalone ==
+
+ORDS: Release 26.3 Production on Thu Oct 01 14:41:07 2026
+
+Copyright (c) 2010, 2026, Oracle.
+
+Configuration:
+  /etc/ords/config
+
+The global setting named: standalone.http.port was set to: 8080
