@@ -1,0 +1,96 @@
+== Descarga o confirmacion de la imagen ==
+latest: Pulling from database/free
+c2923101033c: Pulling fs layer
+019d48a5a2e8: Pulling fs layer
+7f594762f653: Pulling fs layer
+bd9ddc54bea9: Pulling fs layer
+20974563ab06: Pulling fs layer
+45c955d019b0: Pulling fs layer
+82a35a036e7e: Pulling fs layer
+dbef2cad1caa: Pulling fs layer
+3ddaa61de91d: Pulling fs layer
+c46ae4a8b211: Pulling fs layer
+1c1d3a69d0cb: Pulling fs layer
+ae48b182b415: Pulling fs layer
+a37f31cdc63e: Pulling fs layer
+42aa91253599: Pulling fs layer
+382878d4e3fb: Pulling fs layer
+be7b9171a0ee: Pulling fs layer
+8f7021a93961: Pulling fs layer
+64ce2d341c57: Pulling fs layer
+0053c2dd41b9: Pulling fs layer
+b68ad0bf92bd: Pulling fs layer
+879fe30b3433: Pulling fs layer
+99b041142dd0: Pulling fs layer
+7f765265ed77: Pulling fs layer
+a68c3d41e6fb: Pulling fs layer
+1f3885dc6868: Pulling fs layer
+4914c0d12d92: Pulling fs layer
+fb63bcb7eebe: Pulling fs layer
+beaea3717cbc: Pulling fs layer
+fe20991db010: Pulling fs layer
+019d48a5a2e8: Download complete
+c2923101033c: Download complete
+7f594762f653: Download complete
+20974563ab06: Download complete
+bd9ddc54bea9: Download complete
+42aa91253599: Download complete
+dbef2cad1caa: Download complete
+45c955d019b0: Download complete
+3ddaa61de91d: Download complete
+82a35a036e7e: Download complete
+a37f31cdc63e: Download complete
+1c1d3a69d0cb: Download complete
+382878d4e3fb: Download complete
+ae48b182b415: Download complete
+64ce2d341c57: Download complete
+c46ae4a8b211: Download complete
+0053c2dd41b9: Download complete
+b68ad0bf92bd: Download complete
+879fe30b3433: Download complete
+7f765265ed77: Download complete
+a68c3d41e6fb: Download complete
+1f3885dc6868: Download complete
+beaea3717cbc: Download complete
+4914c0d12d92: Download complete
+99b041142dd0: Download complete
+fb63bcb7eebe: Download complete
+fe20991db010: Download complete
+c2923101033c: Pull complete
+beaea3717cbc: Pull complete
+be7b9171a0ee: Download complete
+a37f31cdc63e: Pull complete
+be7b9171a0ee: Pull complete
+8f7021a93961: Download complete
+8f7021a93961: Pull complete
+64ce2d341c57: Pull complete
+0053c2dd41b9: Pull complete
+4914c0d12d92: Pull complete
+fb63bcb7eebe: Pull complete
+fe20991db010: Pull complete
+879fe30b3433: Pull complete
+a68c3d41e6fb: Pull complete
+1f3885dc6868: Pull complete
+99b041142dd0: Pull complete
+7f594762f653: Pull complete
+bd9ddc54bea9: Pull complete
+3ddaa61de91d: Pull complete
+20974563ab06: Pull complete
+45c955d019b0: Pull complete
+82a35a036e7e: Pull complete
+dbef2cad1caa: Pull complete
+c46ae4a8b211: Pull complete
+42aa91253599: Pull complete
+1c1d3a69d0cb: Pull complete
+ae48b182b415: Pull complete
+019d48a5a2e8: Pull complete
+382878d4e3fb: Pull complete
+b68ad0bf92bd: Pull complete
+7f765265ed77: Pull complete
+Digest: sha256:f988b0c04c4c386cd306a2a914c0d7a9702d83acc31b064a28ad8eb6278a8fba
+Status: Downloaded newer image for container-registry.oracle.com/database/free:latest
+container-registry.oracle.com/database/free:latest
+
+== Imagen local y su digest (version exacta instalada) ==
+REPOSITORY                                    TAG       DIGEST                                                                    IMAGE ID       CREATED        SIZE
+container-registry.oracle.com/database/free   latest    sha256:f988b0c04c4c386cd306a2a914c0d7a9702d83acc31b064a28ad8eb6278a8fba   f988b0c04c4c   2 months ago   13.8GB
