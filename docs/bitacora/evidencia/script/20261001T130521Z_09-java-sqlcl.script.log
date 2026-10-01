@@ -1,0 +1,10 @@
+== Java ==
+openjdk version "21.0.12.1" 2026-08-18
+OpenJDK Runtime Environment (build 21.0.12.1+1-1-24.04.4-Ubuntu)
+OpenJDK 64-Bit Server VM (build 21.0.12.1+1-1-24.04.4-Ubuntu, mixed mode, sharing)
+
+== JAVA_HOME ==
+/usr/lib/jvm/java-21-openjdk-amd64
+
+== SQLcl ==
+SQLcl: Release 26.3.0.0 Production Build: 26.3.0.260.1620

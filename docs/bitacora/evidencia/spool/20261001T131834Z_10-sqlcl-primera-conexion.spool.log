@@ -1,0 +1,19 @@
+USER is "SYSTEM"
+CON_NAME 
+------------------------------
+FREEPDB1
+
+BANNER_FULL                                                                            
+______________________________________________________________________________________ 
+Oracle AI Database 26ai Free Release 23.26.3.0.0 - Develop, Learn, and Run for Free    
+Version 23.26.3.0.0                                                                    
+
+
+USERNAME           ACCOUNT_STATUS    
+__________________ _________________ 
+ADMIN_ACADEMIA     OPEN              
+ADMIN_CLINICA      OPEN              
+ADMIN_FINTECH      OPEN              
+ADMIN_LOGISTICA    OPEN              
+ADMIN_RETAIL       OPEN              
+
