@@ -1,0 +1,120 @@
+
+Session altered.
+
+
+Session altered.
+
+
+Table created.
+
+
+Table created.
+
+
+Table created.
+
+
+Index created.
+
+
+Index created.
+
+
+Session altered.
+
+
+Table created.
+
+
+Table created.
+
+
+Table created.
+
+
+Index created.
+
+
+Index created.
+
+
+Session altered.
+
+
+Table created.
+
+
+Table created.
+
+
+Table created.
+
+
+Index created.
+
+
+Index created.
+
+
+Index created.
+
+
+Session altered.
+
+
+Table created.
+
+
+Table created.
+
+
+Table created.
+
+
+Index created.
+
+
+Session altered.
+
+
+Table created.
+
+
+Table created.
+
+
+Index created.
+
+
+Index created.
+
+
+Index created.
+
+== Verificacion: tablas por esquema ==
+
+OWNER
+--------------------------------------------------------------------------------
+    TABLAS
+----------
+ADMIN_ACADEMIA
+	 3
+
+ADMIN_CLINICA
+	 3
+
+ADMIN_FINTECH
+	 2
+
+
+OWNER
+--------------------------------------------------------------------------------
+    TABLAS
+----------
+ADMIN_LOGISTICA
+	 3
+
+ADMIN_RETAIL
+	 3
+
+
