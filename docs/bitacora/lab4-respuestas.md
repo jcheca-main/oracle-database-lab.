@@ -505,3 +505,59 @@ El recorrido completo en un **HDD a 150 MB/s** cuesta `370 × 8192 / 157286,4 = 
 **Pregunta 21: una sesión hace un recorrido completo y el evento dominante es "db file scattered read". ¿Qué indica?**
 
 **B. Lecturas multibloque a la caché de buffers.** `db file scattered read` es el recorrido completo trae varios bloques de golpe (multibloque) a la caché; `db file sequential read` es el de un solo bloque (típico de índice) y `direct path read` es el multibloque directo a la PGA que se salta la caché.
+
+## Parte M · Filas migradas y encadenadas: provocarlas, detectarlas y curarlas
+
+**¿Qué hice y por qué?**
+
+La Unidad 3 (3.1.8) llama a la migración y al encadenamiento "asesinos silenciosos del I/O": no dan errores ni salen en los logs, pero cada acceso a una fila cuesta una lectura más. Con `14-filas-migradas.sql` provocué los dos problemas a propósito, los detecté con evidencia, medí su coste real y los curé. El script reutiliza el banco de la Parte L (`LAB4_PRUEBAS` / `TBS_LAB4`) y lo borra al final: no deja basura.
+
+El recorrido: (1) creo `MIGRA` con **PCTFREE 0** y filas de 9 bytes — bloques llenos al 100 %, sin hueco para crecer; (2) hago crecer **una de cada cinco** filas de 1 a 300 bytes para provocar la migración; (3) las detecto con `ANALYZE ... LIST CHAINED ROWS`; (4) mido el coste con la estadística `table fetch continued row`; (5) vero la cabeza de una fila migrada en el bloque con un dump; (6) provoco **encadenamiento** real con una fila de ~12 000 bytes; (7) curo la migración con `ALTER TABLE ... MOVE`; (8) borro el banco de pruebas.
+
+**Respuestas con mis números:**
+
+**1. Provocué la migración: 1000 de 5000 filas (20 %) migraron tras el UPDATE.**
+`14-filas-migradas.script.log` (secciones 1-2): `MIGRA` empezó con 5000 filas en **13 bloques**, `AVG_ROW_LEN 9`, `CHAIN_CNT 0`. Tras `UPDATE ... SET txt = RPAD('x',300,'x') WHERE MOD(id,5)=0` (las de id múltiplo de 5), las estadísticas dan `CHAIN_CNT 1000` y `PCT_MIGRADAS 20`, con `AVG_ROW_LEN 70` y **58 bloques**. Nota del guion que confirmé: **`CHAIN_CNT` solo lo rellena `ANALYZE ... COMPUTE STATISTICS`; `DBMS_STATS` no lo calcula**.
+
+**2. Las detecté una a una: `LIST CHAINED ROWS` listó exactamente las 1000 migradas.**
+`14-filas-migradas.script.log` (sección 3): `FILAS_LISTADAS 1000`. La primera fila de la lista es la `ID 5`, con `ROWID_CABEZA AAAR/3AAAAAABYLAAE` en `ARCHIVO 25, BLOQUE 5643, RANURA 4`. `CHAIN_CNT` no distingue migradas de encadenadas, pero `LIST CHAINED ROWS` guarda el `head_rowid` de cada una, que es lo que importa para saber dónde está la cabeza.
+
+**3. El coste: 3,2 lecturas lógicas por búsqueda, un 7 % de más, para siempre.**
+`14-filas-migradas.script.log` (sección 4): 1000 búsquedas por clave dieron `table fetch continued row = 200` y `lecturas lógicas = 3200` (**3,2 por búsqueda**). Una búsqueda normal cuesta 3 (índice de dos niveles + bloque de tabla); las 200 migradas de la muestra cuestan 4. `(800·3 + 200·4)/1000 = 3,2`. El 20 % de filas migradas no se traduce en un 20 % más, pero sí en un 7 % de trabajo extra en cada acceso, de forma permanente.
+
+**4. Lo verifiqué en el bloque: la cabeza se queda y apunta al nuevo sitio con `nrid`.**
+`14-filas-migradas.script.log` (sección 5), dump del bloque 5643:
+```
+tab 0, row 4, @0x1f6f
+tl: 9 fb: --H----- lb: 0x2  cc: 0
+nrid:  0x00001623.25a
+```
+`fb: --H-----` significa **solo la cabeza (Head)**: sin `F` ni `L`, la fila no está realmente aquí. El `nrid 0x00001623.25a` es la nueva dirección: en BIGFILE la parte anterior al punto es el bloque — `0x1623 = 5667` — y tras el punto, la ranura. Una fila normal tendría `fb: --H-FL--` (Head, First y Last en el mismo bloque).
+
+**5. Provqué encadenamiento real: una fila de ~12 000 bytes no cabe en ningún bloque de 8 KB.**
+`14-filas-migradas.script.log` (sección 6): `ANCHA` con dos filas —una de 3×4000 bytes y otra "corta"— da `CHAIN_CNT 1` y `AVG_ROW_LEN 6016`. Solo la fila grande está encadenada; la corta no. Reorganizar **no** cura esto: la fila mide más que el bloque, así que hace falta un tablespace de 16/32 KB o rediseñar la tabla (separar columnas grandes).
+
+**6. Curé la migración con `MOVE` + `REBUILD` y la dejé en 0 encadenadas.**
+`14-filas-migradas.script.log` (sección 7): tras `ALTER TABLE lab4_pruebas.migra MOVE PCTFREE 20`, el índice `PK_MIGRA` queda **`UNUSABLE`** (las filas tienen ROWID nuevo y el índice apunta a los viejos). Tras `ALTER INDEX pk_migra REBUILD`, vuelve a **`VALID`**. El resultado: `CHAIN_CNT 0`, `PCT_FREE 20` y **63 bloques** (más que los 58 previos, porque ahora cada bloque deja un 20 % libre para que ninguna fila vuelva a mudarse). En producción usaría `ALTER TABLE ... MOVE ONLINE`, que mantiene los índices válidos y no bloquea el DML.
+
+**7. Limpié: el banco de pruebas del Lab 4 ya no existe.**
+`14-filas-migradas.script.log` (sección 8): `DROP USER lab4_pruebas CASCADE` + `DROP TABLESPACE tbs_lab4 INCLUDING CONTENTS AND DATAFILES` → `TBS_LAB4_RESTANTES 0`.
+
+**Resumen de la parte (migración vs. encadenamiento):**
+
+| | Migración | Encadenamiento |
+|---|---|---|
+| Causa | UPDATE que agranda la fila y no cabe en su bloque | La fila mide más que un bloque (o >255 columnas) |
+| Qué queda en el bloque original | La cabeza con la dirección nueva (`nrid`) | La primera pieza, enlazada con las demás |
+| Detección | `CHAIN_CNT`, `LIST CHAINED ROWS`, `table fetch continued row` | Igual |
+| Coste | Una lectura más por acceso por ROWID (índice) | Una lectura más por pieza, en todo acceso |
+| Cura | `ALTER TABLE ... MOVE (ONLINE)` con PCTFREE adecuado | Bloque mayor (16/32 KB) o rediseño |
+| Prevención | PCTFREE acorde al crecimiento esperado | Separar columnas grandes (LOB, tabla aparte) |
+
+**Pregunta 22: tras actualizar muchas filas, `table fetch continued row` crece. ¿Qué dos acciones son adecuadas?**
+
+**A y C.** `ANALYZE TABLE ... LIST CHAINED ROWS` para identificar las filas afectadas, y `ALTER TABLE ... MOVE ONLINE` con un PCTFREE mayor para curarlas. (`DBMS_STATS` no rellena `CHAIN_CNT`; `FLUSH BUFFER_CACHE` y `DB_FILE_MULTIBLOCK_READ_COUNT` no tienen nada que ver con el problema.)
+
+**Pregunta 23: una fila mide 12 000 bytes y el tablespace usa bloques de 8 KB. ¿Qué es cierto?**
+
+**B. La fila está encadenada y `MOVE` no lo arregla.** La fila no cabe en ningún bloque de 8 KB, así que se reparte en varias piezas; reorganizar la tabla no la reunirá jamás. Hace falta un tablespace con bloques mayores o rediseñar la tabla.
