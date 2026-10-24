@@ -1,0 +1,7 @@
+  32 docs/bitacora/lab4/evidencia/config/initFREE_lab4.ora
+ 122 docs/bitacora/lab4/evidencia/config/initFREE_lab4_memoria.ora
+ 154 total
+== Parámetros que tienen valor en MEMORIA pero NO están escritos en el SPFILE (derivados o por defecto) ==
+connection_brokers core_dump_dest job_queue_processes lockfree_reservation log_buffer optimizer_mode 
+parallel_min_servers plsql_warnings query_rewrite_enabled result_cache_max_size result_cache_max_temp_result 
+result_cache_max_temp_size

@@ -139,3 +139,41 @@ Y FREEPDB1 se abrió sola tras `ALTER DATABASE OPEN`: no es magia, es el estado 
 - D incorrecta: `ALTER DATABASE ARCHIVELOG` exige MOUNT (el control file debe estar abierto y la base desmontable).
 
 **P5: respuesta B (MOUNT).** El commando reescribe la cabecera de los control files y el modo de registro, así que necesita los control files abiertos (MOUNT) y la base no debe estar OPEN.
+
+## Parte F - Parámetros: SPFILE, SCOPE y PDB
+
+### Lo que leí (F.1)
+
+La instancia arrancó con SPFILE (`/opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora`, que en mi imagen es enlace al volumen). El SPFILE solo especifica **18** parámetros, pero `v$parameter` documenta **564**: el resto toman valor por defecto o derivado. De los 564, 18 no están en su valor por defecto y 134 son estáticos (`ISSYS_MODIFIABLE = FALSE`).
+
+Los que marcan la arquitectura del curso: `db_block_size = 8192` (la página de 8 KB de la Unidad 3, fijado al crear la base y que ya nunca podrá cambiar), `sga_target = 1536M`, `pga_aggregate_target = 512M`, `pga_aggregate_limit = 2G`, `processes = 200`, `compatible = 23.6.0` (solo puede subirse). Detalle interesante en mi entorno: `db_create_file_dest` sale vacío en CDB$ROOT porque el OMF de la Parte C lo fijé **en FREEPDB1** (es un parámetro modificable por PDB).
+
+### Lo que cambié y deshice (F.2)
+
+Recorrí los cinco alcances y el script devuelve la instancia exactamente como estaba:
+
+- `open_cursors` con `SCOPE=MEMORY`: 400 en memoria, 300 en SPFILE (se pierde al reiniciar).
+- `open_cursors` con `SCOPE=BOTH` + comentario: 500 en ambos, y el comentario queda visible en `update_comment`. Deshecho al valor original 300.
+- `db_files` (estático): `SCOPE=MEMORY` → **ORA-02095**; `SCOPE=SPFILE` → aceptado pero PENDIENTE hasta el próximo arranque (en memoria sigue 200, en el SPFILE 300). Deshecho con `ALTER SYSTEM RESET db_files SCOPE=SPFILE`, que borra la línea y vuelve al valor por defecto.
+- `processes` → **ORA-02097 + ORA-02095**: aunque `v$parameter` dice `ISSYS_MODIFIABLE = IMMEDIATE`, en la práctica es estático (dimensiona estructuras de la SGA al arrancar). `memory_size` → **ORA-62352**: solo es dinámico si la instancia arrancó con él.
+- Nivel PDB: dentro de FREEPDB1 fijé `open_cursors = 350` (solo esa PDB) y `processes` devolvió **ORA-65040** (parámetro de instancia, no se toca desde una PDB). Tras `RESET`, FREEPDB1 volvió a heredar el 300 del CDB.
+- Nivel sesión: `ALTER SESSION SET nls_date_format`, solo para esta conexión.
+- Seguro antes de tocar el SPFILE: `CREATE PFILE FROM SPFILE` (32 líneas) y `CREATE PFILE FROM MEMORY` (122 líneas). La diferencia es la respuesta a "por qué el SPFILE solo tiene 18 líneas".
+
+### Reto - Petición de cambio (open_cursors a 1000)
+
+- **Valor actual y de dónde sale:** `open_cursors = 300`, fijado explícitamente en el SPFILE (no es por defecto: `ISDEFAULT = FALSE`), modificable por sesión y por PDB.
+- **Valor propuesto:** 1000.
+- **Alcance:** `ALTER SYSTEM SET open_cursors = 1000 SCOPE = BOTH;` — es un parámetro dinámico (`ISSYS_MODIFIABLE = IMMEDIATE`), así que BOTH le aplica ya y lo deja escrito para el próximo arranque. `MEMORY` no valdría (desaparecería al reiniciar y el incidente volvería); `SPFILE` no valdría (la aplicación sufriría hasta el siguiente reinicio).
+- **Cómo lo pruebo:** (1) compruebo memoria y SPFILE (`v$parameter` y `v$spparameter`); (2) mido antes y después el uso real con `SELECT MAX(a.value) FROM v$sesstat a, v$statname b WHERE a.statistic# = b.statistic# AND b.name = 'opened cursors current';` y reviso `v$open_cursor` por aplicación; (3) confirmo que desaparecen los ORA-01000 del log de la aplicación durante un pico de carga.
+- **Rollback:** `ALTER SYSTEM SET open_cursors = 300 SCOPE = BOTH;` (instantáneo, sin reinicio).
+- **Evidencia que guardo:** spool del cambio, y el PFILE versionado en `evidencia/config/` que servirá para detectar deriva de configuración con `git diff`.
+- **Advertencia profesional:** ORA-01000 casi siempre delata cursores que la aplicación no cierra; subir el límite solo retrasa el problema y consume más memoria por sesión. Lo correcto es entregar el número con medición y abrir un ticket para el equipo de desarrollo con `v$open_cursor` como prueba.
+
+### Preguntas tipo examen P6, P7 y P8
+
+**P6: respuesta B.** Sin cláusula SCOPE, el valor por defecto es BOTH cuando la instancia arrancó con SPFILE (MEMORY si arrancó con PFILE). Por eso el cambio se aplica en memoria y queda escrito en el SPFILE.
+
+**P7: respuesta C.** `processes` no es modificable a nivel de PDB (`ISPDB_MODIFIABLE = FALSE`): desde FREEPDB1 Oracle responde **ORA-65040: Operation is not allowed from within a pluggable database**. No es por ser estático (eso daría ORA-02095): el problema es el nivel.
+
+**P8: respuestas A y C.** Con un SPFILE con un valor imposible la instancia no pasa de NOMOUNT: se arranca con el PFILE bueno (`STARTUP PFILE='/ruta/init_bueno.ora'`) y desde ahí se repara el SPFILE con `CREATE SPFILE FROM PFILE='/ruta/init_bueno.ora'`. RESET en MEMORY no aplica (MEMORY no escribe en el SPFILE), RESETLOGS es de recuperación y SHUTDOWN ABORT no arregla nada.
