@@ -279,3 +279,63 @@ Tres matices del guion que compruebo en mi entorno:
 - **Detalle de por qué importa:** la PGA de esa sesión es minúscula (3,4 MB) porque el producto cartesiano se resuelve casi entero con lecturas del Buffer Cache (caliente desde la Parte G) y el conteo no ordena; si hubiera un `ORDER BY` grande, esa misma PGA se dispararía hacia TEMP (Parte G, experimento 3). Y con el SPID en la mano puedo correlacionar con `09-procesos-so.sh` o con `docker stats` sin adivinar de qué proceso hablo.
 
 Evidencias: `09-procesos.script.log`, `09-procesos-so.script.log`, spools `09-procesos` y `09-reto-sesion-larga`.
+
+## Parte I - Navegar por los contenedores: qué ve cada usuario y por qué
+
+### El mapa (I.1)
+
+En mi CDB: `CON_ID 1 = CDB$ROOT` (READ WRITE), `2 = PDB$SEED` (READ ONLY, siempre, 810 MB), `3 = FREEPDB1` (READ WRITE con SAVE STATE, 1442 MB, los esquemas de negocio). `CON_ID 0` no es un contenedor: es el nivel "toda la CDB" (redo, instancia, procesos). Familias: `USER_` lo mío, `ALL_` lo que puedo tocar, `DBA_` todo el contenedor actual, `CDB_` el `DBA_` de todos los contenedores con `CON_ID`, `V$/GV$` memoria y control file (GV$ = todas las instancias de un RAC).
+
+### Experimento: tres usuarios, las mismas preguntas (I.2)
+
+- **SYS en la raíz:** `v$datafile` = **4 (root) + 3 (seed) + 9 (FREEPDB1)** = 16 datafiles, y `v$log` sale con **CON_ID 0**.
+- **SYS dentro de FREEPDB1:** la misma `v$datafile` devuelve **solo CON_ID 3 (9 filas)** y `dba_tablespaces = 10`, mientras `cdb_tablespaces` solo muestra la fila de FREEPDB1: dentro de una PDB hasta las `CDB_` se filtran.
+- **`lab4_analista` (local, solo CREATE SESSION):** `USER_TABLES = 0`, y los tres errores esperados: **ORA-00942** en `DBA_TABLES`, en `V$SESSION` y en `admin_academia.aca_estudiantes` (Oracle no revela lo que no puedes ver: responde "no existe"), y **ORA-01031** al intentar `SET CONTAINER = CDB$ROOT` (ni tiene el privilegio ni la cuenta existe en la raíz).
+- **`lab4_analista` + `GRANT READ ANY TABLE ON SCHEMA admin_academia` (23ai):** ve las **3 tablas** del esquema y cuenta **20 000 estudiantes**, sigue sin ver `admin_clinica` (ORA-00942) y el `UPDATE` devuelve **ORA-41900: missing UPDATE privilege** (el mensaje de 23ai dice el privilegio y el objeto exactos).
+- **`c##lab4_auditor` (común sin CONTAINER_DATA) en la raíz:** `cdb_tablespaces` = **solo 5 filas (CON_ID 1)** y `v$session` = 87 filas de CON_ID 0 + 3 de CON_ID 1, ninguna de FREEPDB1. Con `SET CONTAINER = FREEPDB1` sí ve los 10 tablespaces de la PDB. `cdb_container_data` confirma la diferencia con mi cuenta: **`C##OPS_RO  Y  Y`** (DEFAULT_ATTR y ALL_CONTAINERS) y `C##LAB4_AUDITOR` no aparece.
+- Limpieza: `USUARIOS_LAB4_RESTANTES = 0`.
+
+### Punto de control - interpretar la salida
+
+1. **¿Por qué `V$LOG` tiene CON_ID 0 y el redo no pertenece a ninguna PDB?** Porque el redo es de la **instancia**: todas las PDB de la CDB comparten el mismo redo log y el mismo control file (una instancia, un redo, varios pisos). No existe "redo de FREEPDB1", así que la fila se publica en el nivel 0 (toda la CDB) y sale igual estés donde estés. Por eso `ALTER DATABASE ARCHIVELOG` es una operación de instancia (Parte F: exige MOUNT) y no se puede configurar por PDB.
+2. **¿Qué sentencia haría que `C##LAB4_AUDITOR` viera las sesiones de FREEPDB1?** Conectado como SYS en la raíz: `ALTER USER c##lab4_auditor SET CONTAINER_DATA = ALL CONTAINER = CURRENT;`. No sirve `SELECT ANY DICTIONARY` ni abrir más PDBs: el filtro no es de privilegio de catálogo sino de **atributo CONTAINER_DATA** de la cuenta (la Parte B ya me mostró `C##OPS_RO` con `ALL_CONTAINERS = Y`, por eso yo sí veo todos).
+3. **¿Qué habría pasado con `SELECT ANY TABLE`?** Habría leído también `ADMIN_CLINICA` y cualquier otro esquema de la PDB: no distingue esquemas, es un privilegio de escala amplia que incumple mínimo privilegio. `READ ANY TABLE ON SCHEMA admin_clinica` abre exactamente ese esquema, incluidas las tablas que se creen después (que es lo que pedía la auditora), y nada más.
+
+### El diccionario se describe a sí mismo (I.3)
+
+Con la misma cuenta (`C##OPS_RO`, servicio FREE): **USER_ 656, ALL_ 590, DBA_ 1309, CDB_ 1307, V$ 921, GV$ 880** vistas. La misma pregunta con las dos familias: `DBA_TABLESPACES = 5` (solo la raíz) frente a `CDB_TABLESPACES = 15` (5 de CDB$ROOT + 10 de FREEPDB1; la semilla no cuenta porque está READ ONLY y las `CDB_` la excluyen) — y eso es posible porque `C##OPS_RO` tiene `CONTAINER_DATA = ALL`: sin ese atributo solo vería las 5. `v$fixed_table` muestra **1591 tablas X$** y **1803 vistas**. Y `V$LOG` se describe sobre `x$kccle` + `x$kccrt`: "kcc" es la capa del control file (kernel cache control file), que explica por qué `V$LOG` solo responde cuando el control file está abierto (MOUNT, Parte E).
+
+### Ciclo de vida de una PDB y usuarios (I.4)
+
+- **Usuarios comunes vs locales:** `SYS`, `SYSTEM`, `C##OPS_RO` = `COM YES` y aparecen en CDB$ROOT **y** FREEPDB1; `PDBADMIN`, `ADMIN_ACADEMIA` = `NO`, solo en FREEPDB1.
+- **Errores de examen, todos disparados en mi entorno:** `common_user_prefix = C##` (aquí sí está fijado; el guion mostraba vacío porque su imagen de pruebas lo tenía sin definir) → **ORA-65096** creando `lab4_local` sin prefijo en la raíz, **ORA-65094** creando `c##lab4_comun` desde FREEPDB1, y el usuario local en la PDB se crea sin más.
+- **Ciclo completo:** `CREATE PLUGGABLE DATABASE pdb_lab4 FROM SEED` con `FILE_NAME_CONVERT` (PDB$SEED → carpeta propia): nace **MOUNTED**, `OPEN` → READ WRITE, sus 3 datafiles copiados en `/opt/oracle/oradata/FREE/PDB_LAB4/` y el servicio `pdb_lab4` registrado en el listener por LREG (el proceso que en la Parte H "registra los servicios"). Al borrarla: primero `DROP ... INCLUDING DATAFILES` → **ORA-65025** (está abierta), después `CLOSE IMMEDIATE` + `DROP`, queda `v$pdbs` sin ella y el script `rmdir`s la carpeta vacía → "Carpeta PDB_LAB4 eliminada". El script de borrado del guion trae el DROP antes del CLOSE a propósito: el error es el aprendizaje.
+
+### Reto - Diseño del acceso de una auditor externa (no se ejecuta)
+
+```sql
+-- 1) Conectado a FREEPDB1 (la auditora solo audita ADMIN_CLINICA, no necesita la raíz)
+CREATE USER auditor_ext IDENTIFIED BY "<generada-y-cifrada>";
+-- 2) Mínimo para trabajar, todo en FREEPDB1:
+GRANT CREATE SESSION TO auditor_ext;
+GRANT READ ANY TABLE ON SCHEMA admin_clinica TO auditor_ext;
+-- 3) Último día:
+REVOKE READ ANY TABLE ON SCHEMA admin_clinica FROM auditor_ext;
+REVOKE CREATE SESSION FROM auditor_ext;
+DROP USER auditor_ext CASCADE;   -- el respaldo definitivo de la revocación
+```
+
+- **¿Común o local? ¿En qué contenedor?** **Local, en FREEPDB1.** Un común (`C##`) existe en todos los contenedores, obliga al prefijo, y le daría visibilidad de la raíz (I.2: el común sin CONTAINER_DATA de todas formas no ve las PDB, así que ni siquiera serviría "para algo"); la auditora solo necesita un piso. Como es local, ni puede hacer `SET CONTAINER` (necesitaría `GRANT SET CONTAINER`, que no se le da).
+- **GRANT mínimo:** `CREATE SESSION` para entrar y `READ ANY TABLE ON SCHEMA admin_clinica` (23ai): el esquema completo, **incluidas las tablas que se creen durante la semana**, y nada más. En I.2 comprobé que el mismo privilegio dejó leer 20 000 filas de un esquema, no abrió el esquema vecino (ORA-00942) e impidió el `UPDATE` con **ORA-41900**. Sería equivalente conceder `SELECT` tabla a tabla (`cli_pacientes`, `cli_historias`, ...), pero hay que repetirlo con cada tabla nueva y se olvida: el privilegio de esquema evita el fallo silencioso de "me faltó una tabla".
+- **Por qué no el catálogo:** `SELECT_CATALOG_ROLE` (que sí tiene `c##lab4_auditor` en I.2) abre todo el diccionario de la PDB: exceso para una auditoría de un esquema. Y nada de `SELECT ANY TABLE` (sin `ON SCHEMA`) ni de roles de escritura.
+- **Revocación del último día:** `REVOKE` de los dos privilegios y `DROP USER ... CASCADE` como cierre; el revocar solo `CREATE SESSION` ya la dejaría sin acceso inmediato, pero el DROP garantiza que no quede una cuenta olvidada para siempre (misma lógica que el V003 de la Parte D).
+
+### Preguntas tipo examen P13, P14 y P15
+
+**P13: respuesta B (solo la fila de CON_ID 3).** `V$DATAFILE` se filtra por el contenedor de la sesión: en la raíz ve las 16 de los tres contenedores, dentro de FREEPDB1 solo sus 9. A incorrecta (no siempre muestra la CDB), C (CON_ID 0 es de redo/instancia, no de datafiles), D (`V$DATAFILE` existe en cualquier contenedor; la restricción es de visibilidad, no de existencia).
+
+**P14: respuesta B (`ALTER USER c##audit SET CONTAINER_DATA = ALL ...`).** Es el atributo `CONTAINER_DATA` el que filtra las `CDB_`; `SELECT ANY DICTIONARY` no lo cambia, `SET CONTAINER` solo le deja entrar en cada PDB y mirar desde dentro, y abrir PDBs no quita el filtro de la cuenta.
+
+**P15: respuestas A y D.** El privilegio de esquema es "todas las tablas del esquema, presentes y futuras" (A) y no se extrapola a otros esquemas (D). B falsa (solo ese esquema), C falsa (lectura; el `UPDATE` da ORA-41900, lo vi en I.2), E falsa (funciona con usuarios locales, `lab4_analista` lo es).
+
+Evidencias: `10-que-ve-cada-usuario.script.log`, `10-ciclo-vida-pdb.script.log` y el spool `10-diccionario`.

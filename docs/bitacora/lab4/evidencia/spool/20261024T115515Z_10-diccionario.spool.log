@@ -1,0 +1,43 @@
+SQL Format Cleared
+
+== 1. Familias de vistas: quién ve qué ==
+
+FAMILIA                                        VISTAS
+------------------------------------------ ----------
+USER_  (lo mío)                                   656
+ALL_   (aquello a lo que tengo acceso)            590
+DBA_   (todo el contenedor actual)               1309
+CDB_   (todos los contenedores)                  1307
+V$     (dinámicas: memoria y control file)        921
+GV$    (V$ de todas las instancias, RAC)          880
+
+== 2. La misma pregunta con DBA_ y con CDB_: ¿cuántos tablespaces hay? ==
+
+FAMILIA                                             N
+------------------------------------------ ----------
+DBA_TABLESPACES (solo CDB$ROOT)                     5
+CDB_TABLESPACES (todos los abiertos)               15
+
+CONTENEDOR TABLESPACES
+---------- -----------
+CDB$ROOT             5
+FREEPDB1            10
+
+== 3. Las V$ se apoyan en tablas X$ en memoria (v$fixed_table) ==
+
+TYPE           N
+----- ----------
+TABLE       1591
+VIEW        1803
+
+== 4. Una vista se describe a sí misma: definición de V$LOG (v$fixed_view_definition) ==
+
+VIEW_DEFINITION
+--------------------------------------------------------------------------------------------------------------------------------------------
+select le.inst_id, le.lenum, le.lethr, le.leseq, le.lesiz*le.lebsz, le.lebsz, ledup, decode(bitand(le.leflg,1),0,'NO','YES'),
+decode(bitand(le.leflg,24), 8, 'CURRENT',                            16,'CLEARING',                            24,'CLEARING_CURRENT',       
+decode(sign(leseq),0,'UNUSED',        decode(sign((to_number(rt.rtckp_scn)-to_number(le.lenxs))*        bitand(rt.rtsta,2)*(64-bitand(rtsta,
+64))),        -1,'ACTIVE','INACTIVE'))), to_number(le.lelos), to_date(le.lelot,'MM/DD/RR HH24:MI:SS','NLS_CALENDAR=Gregorian'),
+to_number(le.lenxs), to_date(le.lenxt,'MM/DD/RR HH24:MI:SS','NLS_CALENDAR=Gregorian'), le.con_id  from x$kccle le, x$kccrt rt where
+le.ledup!=0 and le.lethr=rt.rtnum and  le.inst_id = rt.inst_id
+

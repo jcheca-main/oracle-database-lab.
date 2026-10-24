@@ -1,0 +1,92 @@
+
+===== 1. Los contenedores de la CDB =====
+
+    CON_ID NAME 	OPEN_MODE  RES	       MB
+---------- ------------ ---------- --- ----------
+	 1 CDB$ROOT	READ WRITE NO		0
+	 2 PDB$SEED	READ ONLY  NO	      810
+	 3 FREEPDB1	READ WRITE NO	     1442
+
+===== 2. Usuarios: comunes (C##, existen en todos los contenedores) frente a locales =====
+
+USERNAME	 COM CONTENEDOR
+---------------- --- ----------
+ADMIN_ACADEMIA	 NO  FREEPDB1
+C##OPS_RO	 YES CDB$ROOT
+C##OPS_RO	 YES FREEPDB1
+PDBADMIN	 NO  FREEPDB1
+SYS		 YES CDB$ROOT
+SYS		 YES FREEPDB1
+SYSTEM		 YES CDB$ROOT
+SYSTEM		 YES FREEPDB1
+
+===== 3. Errores de examen al crear usuarios =====
+-- El prefijo obligatorio de los usuarios comunes (por defecto C##):
+
+COMMON_USER_PREFIX
+--------------------
+C##
+-- 3a. Usuario sin el prefijo en la raíz (ORA-65096 esperado si el prefijo es C##)
+CREATE USER lab4_local NO AUTHENTICATION
+            *
+ERROR at line 1:
+ORA-65096: common user or role name must start with prefix C##
+Help: https://docs.oracle.com/error-help/db/ora-65096/
+
+
+-- (si la imagen dejó el prefijo vacío, el usuario se habrá creado como COMÚN: lo borramos)
+-- 3b. Usuario común (C##) desde una PDB (ORA-65094 esperado)
+CREATE USER c##lab4_comun NO AUTHENTICATION
+            *
+ERROR at line 1:
+ORA-65094: invalid local user or role name
+Help: https://docs.oracle.com/error-help/db/ora-65094/
+
+
+-- 3c. Usuario local en la PDB: correcto
+
+USERNAME	 COM CONTENEDOR
+---------------- --- ----------
+LAB4_LOCAL	 NO  FREEPDB1
+
+===== 4. Ciclo de vida: crear una PDB desde la semilla (PDB$SEED) =====
+(la contraseña del administrador se genera al azar y no se muestra: nadie va a iniciar sesión con él)
+PDB_LAB4 creada
+
+    CON_ID NAME 	OPEN_MODE
+---------- ------------ ----------
+	 2 PDB$SEED	READ ONLY
+	 3 FREEPDB1	READ WRITE
+	 4 PDB_LAB4	MOUNTED
+
+    CON_ID NAME 	OPEN_MODE
+---------- ------------ ----------
+	 2 PDB$SEED	READ ONLY
+	 3 FREEPDB1	READ WRITE
+	 4 PDB_LAB4	READ WRITE
+-- Sus archivos (copiados de la semilla) y su servicio, que LREG registra en el listener
+
+FILE_NAME
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+/opt/oracle/oradata/FREE/PDB_LAB4/system01.dbf
+/opt/oracle/oradata/FREE/PDB_LAB4/sysaux01.dbf
+/opt/oracle/oradata/FREE/PDB_LAB4/undotbs01.dbf
+
+NAME	     NETWORK_NAME
+------------ ------------
+pdb_lab4     pdb_lab4
+
+===== 5. Borrar la PDB: primero cerrarla (ORA-65025 si está abierta), después DROP con sus archivos =====
+DROP PLUGGABLE DATABASE pdb_lab4 INCLUDING DATAFILES
+*
+ERROR at line 1:
+ORA-65025: Pluggable database PDB_LAB4 is not closed on all instances.
+Help: https://docs.oracle.com/error-help/db/ora-65025/
+
+
+(queda la carpeta PDB_LAB4 vacía; 10-ciclo-vida-pdb.sh la elimina)
+
+    CON_ID NAME 	OPEN_MODE
+---------- ------------ ----------
+	 2 PDB$SEED	READ ONLY
+	 3 FREEPDB1	READ WRITE
