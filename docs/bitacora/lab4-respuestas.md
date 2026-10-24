@@ -76,3 +76,23 @@ ALTER SYSTEM SET db_create_file_dest = '/opt/oracle/oradata/FREE/FREEPDB1' SCOPE
 **Qué cambia en el próximo `CREATE TABLESPACE tbs_x` sin cláusula DATAFILE:** sin OMF fallaría con ORA-02236 (missing path name) y quien tuviera prisa escribiría una ruta relativa, repitiendo el defecto 1. Con OMF, Oracle elige nombre y ubicación él solo dentro de `db_create_file_dest`. Lo demostré con `CREATE TABLESPACE tbs_prueba_omf;` (sin DATAFILE): creó `/opt/oracle/oradata/FREE/FREEPDB1/FREE/55E54F.../datafile/o1_mf_tbs_prue_ofs4v0tc_.dbf`, 100 MB autoextensible, y lo borró junto con el tablespace con `DROP TABLESPACE ... INCLUDING CONTENTS AND DATAFILES`.
 
 Detalle del entorno: OMF está activo solo en FREEPDB1, que es donde vive el negocio (los datafiles de la raíz ya estaban en su carpeta estándar). Evidencia: `03b-activar-omf.script.log`.
+
+## Parte D - Migraciones V003 (contraseñas) y V002 (datos de demostración)
+
+### Qué corregí y cómo lo verifiqué
+
+**V003 (defecto 2):** borrar las contraseñas de V000 no sirve, siguen en el historial de Git. Los cinco propietarios de esquema (`ADMIN_ACADEMIA`, `ADMIN_CLINICA`, `ADMIN_FINTECH`, `ADMIN_LOGISTICA`, `ADMIN_RETAIL`) pasaron a cuentas de solo esquema con `ALTER USER ... NO AUTHENTICATION`: poseen los objetos, pero nadie puede iniciar sesión con ellos, ni siquiera con la contraseña antigua. Verificado con `dba_users`: los cinco con `AUTHENTICATION_TYPE = NONE` y `ACCOUNT_STATUS = OPEN` (siguen "OPEN" porque no están bloqueadas: no tienen contraseña que bloquear).
+
+La prueba definitiva: conecté con la contraseña literal que quedó en V000 y recibí `ORA-01017: invalid credential or not authorized; logon denied`. La credencial expuesta ya no abre nada.
+
+**08 v2 (defecto 3):** el script de migraciones ya no construye `sys/$ORACLE_PWD@...` (visible con `ps` y registrado en los eventos del demonio de Docker): aplica cada migración con `sqlplus -s -L / as sysdba` dentro del contenedor, es decir, autenticación del sistema operativo. No hay contraseña que filtrar.
+
+**V002:** cargó 20 000 estudiantes, 40 asignaturas y 60 000 matrículas en Academia, deterministas (fila 101 = `00000101X`, `ACTIVO`) y con `DBMS_STATS.GATHER_SCHEMA_STATS` para que el optimizador no invente estimaciones. La repetición confirmó la idempotencia: «V002 ya aplicada (20000 estudiantes): no se inserta nada» y las cifras no se duplicaron. Son los datos con los que trabajarán las Partes G, K, L y M.
+
+### Pregunta tipo examen P-D1
+
+**Respuesta: C.** `ALTER USER app_owner NO AUTHENTICATION;` convierte la cuenta en de solo esquema (schema-only account): ni siquiera quien conoce la contraseña antigua puede entrar, porque la cuenta no tiene ninguna forma de autenticarse.
+
+- A incorrecta: `ACCOUNT LOCK` bloquea, pero la contraseña sigue existiendo; con `ACCOUNT UNLOCK` vuelve a servir.
+- B incorrecta: `PASSWORD EXPIRE` obliga a cambiarla en el próximo inicio; alguien puede iniciar sesión con la nueva.
+- D incorrecta: quitar `CREATE SESSION` impediría el acceso, pero deja la contraseña viva y administrable; y en una PDB la comprobación del examen es la semántica de la cuenta, no un privilegio que se puede devolver.
