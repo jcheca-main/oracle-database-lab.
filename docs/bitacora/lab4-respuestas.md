@@ -241,3 +241,41 @@ Consulta sobre `V$SQL` agrupando por `force_matching_signature` con más de 50 c
 **P-G1: respuesta B.** La solución definitiva es corregir la aplicación para usar variables de enlace. A falla porque la Shared Pool no es la cura (solo aloja más cursores malos y expulsa buenos), C empeora el problema (todo el mundo re-analiza cada hora) y D es el parche temporal que oculta el defecto y degrada la elección de planes.
 
 **P-G2: respuesta B.** `6 PASSES` significa que el área de trabajo no cupo en la PGA y Oracle tuvo que escribir y releer los tramos desde TEMP seis veces: con la misma tabla pequeña ya pasó de 30 ms a 450 ms; con datos reales sería cuestión de minutos.
+
+## Parte H - Procesos de background y procesos servidor
+
+### Los dos libros de contabilidad (H.1 y H.2)
+
+Desde Oracle (`09-procesos.sql`): **87 procesos background y 7 servidor**, con 54 PIDs de Linux para los 87 background: hay procesos Oracle que son hilos dentro de un mismo proceso Linux (SCMN y los spawners), por eso `procesos_oracle > procesos_linux`. Los obligatorios están todos con su PID: PMON 1130, LREG 1194, SMON 1188, DBW0 1180, LGWR 1182, CKPT 1184, MMON 1204, MMNL 1206, RECO 1192, más PSP0, PMAN, MMAN, VKTM, DIAG, DIA0, CLMN, CJQ0 y ARC0.
+
+**Arcn:** salen **4 procesos ARC0-ARC3**, no 0 como en el entorno del guion: mi base está en `ARCHIVELOG` (ya lo anoté en la Parte A). Es la diferencia exacta que el guion prevé: el archivador es opcional en NOARCHIVELOG y obligatorio en ARCHIVELOG.
+
+**Mi sesión:** SID 61 en H.1 (218 en la segunda pasada), `C##OPS_RO` desde `PortatilAuxi`, `PROGRAM = SQLcl` y un SPID propio: arquitectura de **servidor dedicado**, un proceso de Linux por conexión. En `v$session` también se veían las sesiones de usuario del momento: mi SQLcl y las sesiones de trabajos `J000/J001/J002`.
+
+Desde Linux (`09-procesos-so.sh <spid>`): el **SPID de LGWR (1182) es exactamente el PID de `db_lgwr_FREE`** en `/proc` dentro del contenedor. PMON 1130, DBW0 1180, CKPT 1184, SMON 1188, RECO 1192, LREG 1194, MMON 1204, MMNL 1206 también coinciden uno a uno. Recuento en `/proc`: 58-61 procesos `db_*_FREE`/`ora_*_FREE`, 0 `oracleFREE` (no había sesión SQLcl abierta en ese instante) y 1 `tnslsnr` (el listener es un proceso aparte de la instancia).
+
+Tres matices del guion que compruebo en mi entorno:
+
+- **No comparo con `docker top`:** ahí vería el PID del anfitrión (otro espacio de nombres de PID). El cruce correcto es leer `/proc` desde dentro del contenedor, que es lo que hace el script: por eso el SPID de `v$process` y el PID de Linux son el mismo número.
+- **El RSS no se suma:** cada background muestra ~100 MB de RSS, pero casi toda esa memoria es la SGA compartida, repetida en cada proceso. Sumando 60 procesos daría >5 GB en un contenedor que usa ~2 GB. La memoria real la da `v$sga + v$pgastat` (Parte G).
+- **Servidor dedicado, no shared:** 0 procesos `oracleFREE` mientras nadie estaba conectado, y uno por cada SQLcl que abro.
+
+### Preguntas tipo examen P11 y P12
+
+**P11: respuesta C (LGWR).** El COMMIT solo espera a LGWR (`write-ahead logging`): la red va primero al log buffer y LGWR la escribe en los redo logs online antes de devolver el control. DBWn no entra en el COMMIT: los bloques de datos llegan al datafile después, en checkpoints o cuando faltan buffers libres. CKPT actualiza cabeceras y control file, ARCn copia los redo llenos y SMON recupera la instancia.
+
+**P12: respuestas B y D (PMON y SMON).** Son los dos obligatorios en cualquier instancia: PMON limpia procesos de usuario caídos (deshace transacciones, libera bloqueos) y SMON se ocupa de la recuperación de instancia al abrir. ARC0 solo existe en ARCHIVELOG (en mi base sí aparece, pero no es obligatorio), RECO solo hace falta con transacciones distribuidas y CJQ0 solo con trabajos programados.
+
+### Reto - La sesión que más consume (dos terminales)
+
+- **Terminal 1 (SYSDBA):** `docker exec -i oralab-26ai sqlplus / as sysdba`, `ALTER SESSION SET CONTAINER = FREEPDB1;` y la consulta que tarda unos segundos:
+  `SELECT COUNT(*) FROM admin_academia.aca_matriculas a, admin_academia.aca_matriculas b WHERE a.matricula_id < 3000;`
+  Es un producto cartesiano de **179.940.000 filas** y tarda ~5,5 s por pasada; la lancé 4 veces seguidas en segundo plano para tener margen de muestreo.
+- **Terminal 2 (C##OPS_RO):** con `09-reto-sesion-larga.sql` (`v$session` + `v$process`), los tres valores del primer diagnóstico de rendimiento:
+  - **SID = 46** (SERIAL# 38175)
+  - **SPID = 4068** (el PID real de Linux dentro del contenedor; en `/proc` es el proceso `sqlplus@...`)
+  - **PGA = 3,3 MB usada / 3,4 MB asignada** (`pga_used_mem` / `pga_alloc_mem`)
+- **Limpieza:** `ALTER SYSTEM KILL SESSION '46,38175' IMMEDIATE;` devuelve **ORA-00031: session marked for kill**, que no es un fallo: la sesión queda marcada y Oracle la mata al terminar la llamada en curso (el mensaje lo confirma). Verificado después: no queda ninguna sesión SYS mía; solo la sesión `OFSD` del propio contenedor.
+- **Detalle de por qué importa:** la PGA de esa sesión es minúscula (3,4 MB) porque el producto cartesiano se resuelve casi entero con lecturas del Buffer Cache (caliente desde la Parte G) y el conteo no ordena; si hubiera un `ORDER BY` grande, esa misma PGA se dispararía hacia TEMP (Parte G, experimento 3). Y con el SPID en la mano puedo correlacionar con `09-procesos-so.sh` o con `docker stats` sin adivinar de qué proceso hablo.
+
+Evidencias: `09-procesos.script.log`, `09-procesos-so.script.log`, spools `09-procesos` y `09-reto-sesion-larga`.
