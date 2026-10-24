@@ -1,0 +1,79 @@
+SQL Format Cleared
+
+== 1. Los archivos que SON la base de datos: datafiles, tempfiles, control files y redo online ==
+
+TIPO                       CONTENEDOR RUTA                                                               MB ESTADO  
+-------------------------- ---------- ---------------------------------------------------------- ---------- --------
+control file               CDB        /opt/oracle/oradata/FREE/control01.ctl                             18 OK      
+control file               CDB        /opt/oracle/oradata/FREE/control02.ctl                             18 OK      
+datafile                   CDB$ROOT   /opt/oracle/oradata/FREE/sysaux01.dbf                             670 ONLINE  
+datafile                   CDB$ROOT   /opt/oracle/oradata/FREE/system01.dbf                            1070 SYSTEM  
+datafile                   CDB$ROOT   /opt/oracle/oradata/FREE/undotbs01.dbf                             25 ONLINE  
+datafile                   CDB$ROOT   /opt/oracle/oradata/FREE/users01.dbf                                7 ONLINE  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf                  100 ONLINE  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/clinica01.dbf                   100 ONLINE  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/fintech01.dbf                   100 ONLINE  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/logistica01.dbf                 100 ONLINE  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/retail01.dbf                    100 ONLINE  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/sysaux01.dbf                    450 ONLINE  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/system01.dbf                    300 SYSTEM  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/undotbs01.dbf                   100 ONLINE  
+datafile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/users01.dbf                      72 ONLINE  
+datafile                   PDB$SEED   /opt/oracle/oradata/FREE/pdbseed/sysaux01.dbf                     400 ONLINE  
+datafile                   PDB$SEED   /opt/oracle/oradata/FREE/pdbseed/system01.dbf                     290 SYSTEM  
+datafile                   PDB$SEED   /opt/oracle/oradata/FREE/pdbseed/undotbs01.dbf                    100 ONLINE  
+redo online (grupo 1)      CDB        /opt/oracle/oradata/FREE/redo01.log                               200 CURRENT 
+redo online (grupo 2)      CDB        /opt/oracle/oradata/FREE/redo02.log                               200 INACTIVE
+redo online (grupo 3)      CDB        /opt/oracle/oradata/FREE/redo03.log                               200 INACTIVE
+tempfile                   CDB$ROOT   /opt/oracle/oradata/FREE/temp01.dbf                                20 ONLINE  
+tempfile                   FREEPDB1   /opt/oracle/oradata/FREE/FREEPDB1/temp01.dbf                       20 ONLINE  
+tempfile                   PDB$SEED   /opt/oracle/oradata/FREE/pdbseed/temp01.dbf                        20 ONLINE  
+
+== 2. Resumen por tipo ==
+
+TIPO                         ARCHIVOS         MB PARTE_DE_LA_BASE
+-------------------------- ---------- ---------- ----------------
+redo archivado                      3        279 no (relacionado)
+tempfile                            3         60 SÍ (no se copia)
+control file                        2         36 SÍ              
+datafile                           16       3984 SÍ              
+redo online                         3        600 SÍ              
+
+== 3. Los archivos RELACIONADOS (imprescindibles, pero no son la base): SPFILE, password file, ADR ==
+
+NAME                         VALUE                                                     
+---------------------------- ----------------------------------------------------------
+SPFILE                       /opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora    
+password file                /opt/oracle/product/26ai/dbhomeFree/dbs/orapwFREE         
+formato password file        12                                                        
+diagnostic_dest (ADR)        /opt/oracle                                               
+Diag Trace                   /opt/oracle/diag/rdbms/free/FREE/trace                    
+Diag Alert                   /opt/oracle/diag/rdbms/free/FREE/alert                    
+FRA (db_recovery_file_dest)  (sin configurar: llegará en el Lab 5)                     
+modo de archivado            ARCHIVELOG                                                
+
+== 4. Quién puede entrar como SYSDBA desde fuera (el password file por dentro: v$pwfile_users) ==
+
+USERNAME     SYSDB SYSOP SYSBA ACCOUNT_STATUS                
+------------ ----- ----- ----- ------------------------------
+SYS          TRUE  TRUE  FALSE OPEN                          
+
+== 5. El alert log leído con SQL: últimas 8 líneas (v$diag_alert_ext) ==
+
+CUANDO         MESSAGE_TEXT                                                                    
+-------------- --------------------------------------------------------------------------------
+10-24 12:06:40 Time drifted forward by (413000000) micro seconds at 1792843600 whereas allowed 
+10-24 12:06:40 --ATTENTION--                                                                   
+10-24 11:55:29 Completed: DROP PLUGGABLE DATABASE pdb_lab4 INCLUDING DATAFILES                 
+10-24 11:55:29 Deleted file /opt/oracle/oradata/FREE/PDB_LAB4/system01.dbf                     
+10-24 11:55:29 Deleted file /opt/oracle/oradata/FREE/PDB_LAB4/sysaux01.dbf                     
+10-24 11:55:29 Deleted file /opt/oracle/oradata/FREE/PDB_LAB4/temp01.dbf                       
+10-24 11:55:29 Deleted file /opt/oracle/oradata/FREE/PDB_LAB4/undotbs01.dbf                    
+10-24 11:55:29 Stopped service pdb_lab4                                                        
+
+== 6. TEMP: el único tablespace cuyos archivos no se respaldan (se recrean) ==
+
+    CON_ID TABLESPACE_N CONTENTS              BIG
+---------- ------------ --------------------- ---
+         1 TEMP         TEMPORARY             NO 
+         3 TEMP         TEMPORARY             NO 

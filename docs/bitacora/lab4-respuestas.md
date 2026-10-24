@@ -339,3 +339,54 @@ DROP USER auditor_ext CASCADE;   -- el respaldo definitivo de la revocación
 **P15: respuestas A y D.** El privilegio de esquema es "todas las tablas del esquema, presentes y futuras" (A) y no se extrapola a otros esquemas (D). B falsa (solo ese esquema), C falsa (lectura; el `UPDATE` da ORA-41900, lo vi en I.2), E falsa (funciona con usuarios locales, `lab4_analista` lo es).
 
 Evidencias: `10-que-ve-cada-usuario.script.log`, `10-ciclo-vida-pdb.script.log` y el spool `10-diccionario`.
+
+## Parte J - Autopsia de los archivos de la base de datos
+
+### J.1 - Mínimo privilegio: el grant que falta
+
+`GRANT SELECT ON sys.v_$diag_alert_ext TO c##ops_ro CONTAINER = ALL;` → `Grant succeeded` y `dba_tab_privs` confirma **una sola línea: `C##OPS_RO · V_$DIAG_ALERT_EXT · SELECT · YES`**. `SELECT_CATALOG_ROLE` no lo incluye, así que se concede el objeto concreto y nada más. Detalle de examen: el `GRANT` va sobre **`V_$DIAG_ALERT_EXT`**, no sobre `V$DIAG_ALERT_EXT` (la `V$` es un sinónimo público; los privilegios se dan sobre el objeto real).
+
+### J.2 - Inventario desde Oracle (mi salida)
+
+**Los 4 tipos que SON la base:** 16 datafiles (3984 MB), 2 control files (36 MB), 3 grupos de redo online (600 MB: 3 miembros de 200 MB, uno CURRENT) y 3 tempfiles (60 MB). Rutas todas en `/opt/oracle/oradata/FREE/...`, con los cinco datafiles de negocio ya en `FREE/FREEPDB1/` (Parte C). **Archivos relacionados:** SPFILE (`dbs/spfileFREE.ora`, 3584 B), password file (`orapwFREE`, 2048 B, formato 12), ADR en `/opt/oracle/diag/rdbms/free/FREE/`, FRA sin configurar (llega en el Lab 5) y `log_mode = ARCHIVELOG` (mi diferencia con el guion: ahí salía NOARCHIVELOG).
+
+- `v$pwfile_users`: **SYS con SYSDBA y SYSOPER = TRUE** (y SYSBACKUP = FALSE).
+- Alert log por SQL (`v$diag_alert_ext`, ahora concedido): las últimas 8 líneas son justo la Parte I: `Completed: DROP PLUGGABLE DATABASE pdb_lab4`, los `Deleted file` de sus 4 datafiles y `Stopped service pdb_lab4`, más un `--ATTENTION-- Time drifted forward by (413000000) micro seconds` (el reloj del contenedor se movió 413 ms: propio de contenedores, no de la base).
+- `TEMP`: 2 tablespaces TEMPORARY (root y FREEPDB1), `BIGFILE = NO`.
+- Resumen de seguridad: **3 archivos de redo archivado, 279 MB** (mi ARCHIVELOG, en `$ORACLE_HOME/dbs`).
+
+### J.3 - Los mismos archivos desde Linux
+
+Tamaños reales: `academia01.dbf = 104 865 792 bytes = 100 MB + 8192` (el bloque 0 es la cabecera, que Oracle no cuenta), redo `209 715 712 = 200 MB + 512` (bloque de redo de 512 B). Control files, datafiles, redo y tempfiles están **dentro del volumen**; el ADR **no**: `NO: /opt/oracle/diag vive en la capa del contenedor. Al recrearlo, el alert log empieza de cero.` (alert_FREE.log con 102 KB, 219 trazas, ADR 29 MB) — hallazgo que va a la autopsia de la Parte N: la prueba de fuego de la Parte C conservó los datos pero habría borrado la historia del incidente.
+
+**Diferencia con el guion que aclaro con evidencia propia (`11-dbs-enlaces.script.log`):** en mi imagen `$ORACLE_HOME/dbs` **es un enlace** a `/opt/oracle/oradata/dbconfig/FREE/dbs`, por eso el `ls -l $ORACLE_HOME/dbs` del script no lista spfile ni orapw (lista el enlace) y el `find` de profundidad 3 no los alcanza. Con `ls -lL` (siguiendo el enlace) sí aparecen: `spfileFREE.ora` 3584 B, `orapwFREE` 2048 B, `init.ora`, `hc_FREE.dat`, `lkFREE`, `snapcf_FREE.f` y los **3 archivados `arch1_*.dbf` (279 MB)**: el destino por defecto de archivado es `$ORACLE_HOME/dbs`, que en mi caso es el volumen (los archivados sobreviven a `docker rm`; el alert log no).
+
+### Punto de control - interpretar la salida
+
+1. **¿Por qué el password file es "relacionado" si sin él no hay SYSDBA por red?** Porque no describe ni contiene datos de la base: es la lista de cuentas con privilegios de instancia (SYSDBA/SYSOPER/...) para autenticar conexiones remotas. Sin él, la base arranca y sirve igual y se puede entrar por autenticación del SO (`/ as sysdba`, que es como trabajan `sysdba.sh`); solo se pierde la entrada SYSDBA por red. Se regenera con `orapwd`: no hay nada que "recuperar" porque no hay datos dentro. Por eso no forma parte de la base, aunque sea imprescindible para operar.
+2. **¿A dónde apuntan los enlaces de `$ORACLE_HOME/dbs` y qué ganas?** Apuntan a `/opt/oracle/oradata/dbconfig/FREE/dbs`, es decir, **al volumen**. La ganancia: SPFILE, password file y archivados sobreviven a `docker rm` y a la actualización de la imagen (son configuración con estado), y quedan en una carpeta que se puede copiar/versionar aparte del binario. Si vivieran en `$ORACLE_HOME` (capa del contenedor), un recreado dejaría la instancia con el SPFILE antiguo o inexistente.
+3. **¿Por qué TEMP no se respalda?** Porque sus archivos contienen solo áreas de trabajo derivadas (ordenaciones y hash): al abrir, Oracle los recrea vacíos y cualquier contenido se regenera a partir de datafiles y undo. Un tempfile perdido no provoca pérdida de datos ni recuperación; por eso RMAN los excluye (`SÍ (no se copia)` en mi resumen).
+
+### Reto - Plan de copia a partir del inventario
+
+**Copia en frío completa, a mano (mis cifras de la evidencia 11):**
+
+| Archivos | MB |
+|---|---|
+| Datafiles (16) | 3984 |
+| Control files (2) | 36 |
+| Redo online (3) | 600 |
+| SPFILE + password file (3584 B + 2048 B) | ~0 |
+| **Total** | **≈ 4620 MB** |
+
+Procedimiento: `SHUTDOWN IMMEDIATE` (consistente, sin recuperación: P1 de la Parte A) → copiar `/opt/oracle/oradata/FREE/**` + `dbconfig/FREE/dbs/{spfileFREE.ora,orapwFREE}` → arrancar. Si copio el directorio tal cual (`cp -a`) se arrastran **60 MB de tempfiles y archivos que sobran** (`init.ora`, `hc_FREE.dat`, `snapcf_FREE.f`, piezas `c-*`): ≈4680 MB con basura incluida.
+
+**Qué sobra con RMAN:** RMAN en copia consistente copia **datafiles + control file** (≈4020 MB) y en su `autobackup` el **SPFILE**; **no** copia tempfiles (60 MB, inútiles), **no** copia los **online redo** por defecto (600 MB: se protegen multiplexando miembros, Lab 5) ni el password file (se arrastra con la configuración); el redo archivado (279 MB) se respalda aparte cuando se pide `BACKUP ARCHIVELOG`. Ahorro frente a `cp -a`: ~660 MB útiles y, sobre todo, **coherencia**: RMAN comprueba que los archivos que copia son de la misma SCN (un `cp` a mano no lo comprueba).
+
+### Preguntas tipo examen P16 y P17
+
+**P16: respuestas B y D (control files y online redo logs).** Son los dos que la teoría incluye en "database": con datafiles y tempfiles forman la base. Password file, SPFILE y alert log son archivos relacionados (lo acabo de ver en el inventario).
+
+**P17: respuesta C.** Sin ARCHIVELOG no hay redo antiguo en disco fuera de los online redo: restaurar la última copia completa es lo único posible y todo lo cambiado después se pierde. A falsa (RECOVER DATABASE necesita archivado o al menos los online redo intactos), B falsa (`CREATE CONTROLFILE` reconstruye el índice, no los datos), D falsa (sin FRA y sin archivado no hay copias automáticas).
+
+Evidencias: `11-ampliar-ops-ro.script.log`, `11-archivos-so.script.log`, `11-dbs-enlaces.script.log` y el spool `11-archivos`.

@@ -1,0 +1,18 @@
+== $ORACLE_HOME/dbs: en este es un ENLACE, por eso 'ls -l dbs' no muestra spfile/orapw ==
+lrwxrwxrwx 1 oracle oinstall 37 Jul  5 22:02 /opt/oracle/product/26ai/dbhomeFree/dbs -> /opt/oracle/oradata/dbconfig/FREE/dbs
+== Contenido real: dbconfig/FREE/dbs ==
+total 340768
+-rw-r----- 1 oracle oinstall  68800512 Oct  1 12:23 arch1_1_1237845575.dbf
+-rw-r----- 1 oracle oinstall 184693760 Oct  1 19:00 arch1_2_1237845575.dbf
+-rw-r----- 1 oracle oinstall  38818816 Oct 24 11:02 arch1_3_1237845575.dbf
+-rw-r----- 1 oracle oinstall  18907136 Oct  1 12:56 c-1509902213-20261001-00
+-rw-r----- 1 oracle oinstall  18907136 Oct 24 11:26 c-1509902213-20261024-00
+-rw-rw---- 1 oracle oinstall      1544 Oct 24 11:21 hc_FREE.dat
+-rw-r----- 1 oracle oinstall      3079 May 14  2015 init.ora
+-rw-r----- 1 oracle oinstall        24 Jul  5 21:57 lkFREE
+-rw-r----- 1 oracle oinstall      2048 Oct 24 11:05 orapwFREE
+-rw-r----- 1 oracle oinstall  18792448 Oct 24 11:26 snapcf_FREE.f
+-rw-r----- 1 oracle oinstall      3584 Oct 24 11:24 spfileFREE.ora
+== Tamaño en bytes de SPFILE y password file (para el plan de copia) ==
+-rw-r----- 1 oracle oinstall 2048 Oct 24 11:05 /opt/oracle/product/26ai/dbhomeFree/dbs/orapwFREE
+-rw-r----- 1 oracle oinstall 3584 Oct 24 11:24 /opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora
