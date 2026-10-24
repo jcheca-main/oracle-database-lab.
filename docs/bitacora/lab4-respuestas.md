@@ -177,3 +177,67 @@ Recorrí los cinco alcances y el script devuelve la instancia exactamente como e
 **P7: respuesta C.** `processes` no es modificable a nivel de PDB (`ISPDB_MODIFIABLE = FALSE`): desde FREEPDB1 Oracle responde **ORA-65040: Operation is not allowed from within a pluggable database**. No es por ser estático (eso daría ORA-02095): el problema es el nivel.
 
 **P8: respuestas A y C.** Con un SPFILE con un valor imposible la instancia no pasa de NOMOUNT: se arranca con el PFILE bueno (`STARTUP PFILE='/ruta/init_bueno.ora'`) y desde ahí se repara el SPFILE con `CREATE SPFILE FROM PFILE='/ruta/init_bueno.ora'`. RESET en MEMORY no aplica (MEMORY no escribe en el SPFILE), RESETLOGS es de recuperación y SHUTDOWN ABORT no arregla nada.
+
+## Parte G - Memoria: SGA, Buffer Cache, análisis de sentencias y PGA
+
+### Modelo de memoria medido (G.1)
+
+`memory_size = 0` y `memory_target = 0` con `sga_target = 1536M`: esta instancia usa **ASMM** (Oracle reparte la SGA entre buffer cache, shared pool, large pool y java pool), no AMM. La PGA se gestiona aparte con `pga_aggregate_target = 512M` y `pga_aggregate_limit = 2G`. En mi medición: SGA de 1529 MB (buffer cache 1072, shared pool 416) y `total PGA allocated = 409 MB` con `cache hit percentage = 100` y cero sobredimensionados.
+
+Ojo con el asesor: `v$sga_target_advice` da el mismo factor de tiempo (1) para desde 768 MB hasta 3072 MB, porque es una base ociosa donde todo cabe en caché. Concluir "la SGA sobra" a partir de esa tabla sería un error de análisis: los asesores solo sirven con carga real.
+
+Detalle propio de mi entorno: en el top de PGA aparecen ARC0-ARC3 (los archivadores), que en el entorno del guion no existían porque estaba en NOARCHIVELOG; mi base está en ARCHIVELOG.
+
+### Experimento 1 - El Buffer Cache convierte lecturas físicas en lógicas (G.2)
+
+`ACA_ESTUDIANTES` ocupa 244 bloques. Tras `FLUSH BUFFER_CACHE` (solo laboratorio):
+
+- **Ronda 1 (caché fría):** 463 lecturas lógicas, **256 físicas**.
+- **Ronda 2 (caché caliente):** 247 lecturas lógicas, **0 físicas**.
+- `v$bh`: **245 bloques** de la tabla residentes en el Buffer Cache.
+
+Interpretación:
+- **¿Por qué las físicas desaparecen y las lógicas siguen?** Toda lectura física termina en lógica: el bloque se trae del disco a la caché y desde ahí se lee. La ronda 2 no repite I/O, pero el recorrido por los mismos bloques es idéntico: el coste de la ronda 2 es memoria pura.
+- **¿Por qué más lecturas físicas que bloques de tabla (256 vs 244)?** El full scan no lee solo las filas: lee la cabecera del segmento y el mapa de extensiones, y en la primera ronda además se arrastraron bloques auxiliares (diccionario/undo) que provocaron que las lecturas lógicas de la ronda 1 (463) fueran mayores que las de la ronda 2 (247). El invariante es la ronda 2: 247 lecturas lógicas ≈ 244 bloques de la tabla + cabecera, que es el coste real de barrer la tabla.
+- **Tasa de acierto de la ronda 2:** 1 − 0/247 = **100 %**.
+
+### Experimento 2 - Análisis duro frente a variables de enlace (G.3)
+
+1000 consultas sobre la misma tabla:
+
+| Medida | Literales | Bind (:id) |
+|---|---|---|
+| Análisis totales | 1054 | 1 |
+| Análisis duros | 1011 | 1 |
+| CPU de análisis | 530 ms | ~0 ms |
+| Tiempo total | 530 ms | 10 ms |
+| Cursores en V$SQL | 489 (de 1000) | 1 |
+| Memoria en Shared Pool | 17 612 KB | 39 KB |
+
+Con literales, el 100 % del tiempo fue analizar, no ejecutar (53 veces más lento). Y los 489 cursores que sobreviven en `V$SQL` ocupan 17 MB: los otros 511 ya fueron expulsados (aged out), que también es coste porque habrá que reanalizarlos. Con la variable de enlace, PL/SQL mantiene el cursor abierto entre iteraciones: un análisis, mil ejecuciones.
+
+### Experimento 3 - La PGA ordena en memoria o se va a TEMP (G.3)
+
+Ordenar las 60 000 matrículas:
+
+- **PGA automática:** `sorts (memory) = 11`, `sorts (disk) = 0`, 30 ms; `v$sql_workarea` muestra OPTIMAL con 0 KB en TEMP (usó ~2,4 MB de los ~2,7 MB estimados).
+- **Manual con 64 KB:** `sorts (disk) = 1`, **450 ms** (15× más); `LAST_EXECUTION = '6 PASSES'` y **3072 KB escritos en TEMP**.
+
+Y el matiz que el examen pregunta: `maximum PGA allocated` (462 MB) se acerca al objetivo (512 MB) sin ningún error: el objetivo no es un límite; el límite duro es `pga_aggregate_limit` (2 GB), y al llegar a él Oracle empezaría a cortar operaciones con ORA-04036.
+
+### Reto - Encontrar a los culpables (08-reto-literales.sql)
+
+Consulta sobre `V$SQL` agrupando por `force_matching_signature` con más de 50 cursores. La salida: **una sola firma con 426 cursores distintos**, 426 ejecuciones y 15 165 KB de shared pool, con el ejemplo `SELECT /* lab4_literal */ COUNT(*) FROM admin_academia.aca_est...`. Es decir, la consulta del experimento, queOracle no puede unificar porque cada literal es un texto distinto. En una base real, esa tabla es la lista de sospechosos para exigir bind variables al equipo de desarrollo.
+
+### Preguntas tipo examen P9, P10, P-G1 y P-G2
+
+**P9: respuesta B.** Con `SGA_TARGET` fijado, ASMM gestiona el reparto, y `DB_CACHE_SIZE` actúa como suelo: el buffer cache crecerá y encogerá según la carga, pero nunca por debajo de 512 MB.
+- A incorrecta: ASMM puede llevarlo muy por encima de 512 MB.
+- C incorrecta: `MEMORY_TARGET = 0` significa que AMM NO está activo; con ASMM, SGA y PGA se gestionan por separado.
+- D incorrecta: no se ignora; se convierte en el mínimo.
+
+**P10: respuestas A y D.** La PGA de un proceso servidor dedicado contiene el área de trabajo (sort/hash/bitmap merge) y la memoria de estado de sesión. Shared pool, log buffer y buffer cache son de la SGA.
+
+**P-G1: respuesta B.** La solución definitiva es corregir la aplicación para usar variables de enlace. A falla porque la Shared Pool no es la cura (solo aloja más cursores malos y expulsa buenos), C empeora el problema (todo el mundo re-analiza cada hora) y D es el parche temporal que oculta el defecto y degrada la elección de planes.
+
+**P-G2: respuesta B.** `6 PASSES` significa que el área de trabajo no cupo en la PGA y Oracle tuvo que escribir y releer los tramos desde TEMP seis veces: con la misma tabla pequeña ya pasó de 30 ms a 450 ms; con datos reales sería cuestión de minutos.
