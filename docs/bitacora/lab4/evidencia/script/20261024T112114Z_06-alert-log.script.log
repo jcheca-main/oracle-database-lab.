@@ -1,0 +1,46 @@
+== Alert log: /opt/oracle/diag/rdbms/free/FREE/trace/alert_FREE.log ==
+ORA-27302: failure occurred at: spstp:9
+ORA-27303: additional information: error returned by chdir() is 2
+Starting ORACLE instance (normal) (OS id: 39)
+ORA-00800: soft external error, arguments: [Set Priority Failed], [VKTM], [Check traces and OS configuration], [Check Oracle document and MOS notes], []
+ORA-00800: soft external error, arguments: [Set Priority Failed], [LGWR], [Check traces and OS configuration], [Check Oracle document and MOS notes], []
+ALTER DATABASE   MOUNT
+Successful mount of redo thread 1, with mount id 1519551707
+Completed: ALTER DATABASE   MOUNT
+ALTER DATABASE OPEN
+Crash Recovery excluding pdb 2 which was cleanly closed.
+Crash Recovery excluding pdb 3 which was cleanly closed.
+Thread 1 opened at log sequence 4
+Successful open of redo thread 1
+PDB$SEED(2):Opening pdb with Resource Manager plan: DEFAULT_PLAN
+FREEPDB1(3):Opening pdb with Resource Manager plan: DEFAULT_PLAN
+Completed: Pluggable database FREEPDB1 opened read write 
+Completed: ALTER DATABASE OPEN
+FREEPDB1(3):Completed: CREATE TABLESPACE tbs_prueba_omf
+FREEPDB1(3):Completed: DROP TABLESPACE tbs_prueba_omf INCLUDING CONTENTS AND DATAFILES
+Shutting down ORACLE instance (immediate) (OS id: 1125)
+Shutting down instance: further logons disabled
+Completed: Pluggable database FREEPDB1 closed services=None
+Completed: alter pluggable database all close immediate
+ALTER DATABASE CLOSE NORMAL
+Completed: alter pluggable database all close immediate
+Completed: alter pluggable database all close immediate
+Completed: ALTER DATABASE CLOSE NORMAL
+ALTER DATABASE DISMOUNT
+Completed: ALTER DATABASE DISMOUNT
+Instance shutdown complete (OS id: 1125)
+Starting ORACLE instance (normal) (OS id: 1127)
+ORA-00800: soft external error, arguments: [Set Priority Failed], [VKTM], [Check traces and OS configuration], [Check Oracle document and MOS notes], []
+ORA-00800: soft external error, arguments: [Set Priority Failed], [LGWR], [Check traces and OS configuration], [Check Oracle document and MOS notes], []
+ALTER DATABASE MOUNT
+Successful mount of redo thread 1, with mount id 1519551974
+Completed: ALTER DATABASE MOUNT
+ALTER DATABASE OPEN
+Crash Recovery excluding pdb 2 which was cleanly closed.
+Crash Recovery excluding pdb 3 which was cleanly closed.
+Thread 1 opened at log sequence 4
+Successful open of redo thread 1
+PDB$SEED(2):Opening pdb with Resource Manager plan: DEFAULT_PLAN
+FREEPDB1(3):Opening pdb with Resource Manager plan: DEFAULT_PLAN
+Completed: Pluggable database FREEPDB1 opened read write 
+Completed: ALTER DATABASE OPEN

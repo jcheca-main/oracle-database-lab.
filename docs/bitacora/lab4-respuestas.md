@@ -96,3 +96,46 @@ La prueba definitiva: conecté con la contraseña literal que quedó en V000 y r
 - A incorrecta: `ACCOUNT LOCK` bloquea, pero la contraseña sigue existiendo; con `ACCOUNT UNLOCK` vuelve a servir.
 - B incorrecta: `PASSWORD EXPIRE` obliga a cambiarla en el próximo inicio; alguien puede iniciar sesión con la nueva.
 - D incorrecta: quitar `CREATE SESSION` impediría el acceso, pero deja la contraseña viva y administrable; y en una PDB la comprobación del examen es la semántica de la cuenta, no un privilegio que se puede devolver.
+
+## Parte E - Instancia y base de datos, arranque por etapas y alert log
+
+### Instancia frente a base de datos (E.1 y E.2)
+
+Dos entidades distintas que responden a dos preguntas distintas. `v$instance` (la INSTANCIA: memoria + procesos) me dio `FREE`, arrancada el 2026-10-24 11:12:24, es decir, del día en que recreé el contenedor en la Parte C. `v$database` (la BASE: archivos) me dio DBID `1509902213`, creada el 2026-07-05, es decir, de la fecha en que se construyó la imagen. La base lleva existiendo desde julio; la instancia, desde hace unos minutos: eso es exactamente lo que significa "los archivos viven en disco, la instancia vive mientras hay servicio".
+
+El DBID no cambió al recrear el contenedor, pero el HOST_NAME sí (`f49e437017b9`, el ID del contenedor nuevo): el contenedor es desechable, la identidad de la base no.
+
+Desde Linux se ve la misma instancia por otro lado: 57 procesos de background `db_*_FREE` (PMON, DBW0, LGWR, VKTM...), el listener `tnslsnr` aparte de la instancia, y en disco los archivos del CDB y de FREEPDB1 con los cinco datafiles de negocio ya en su carpeta estándar. Detalle: el listener registra cuatro servicios (`FREE`, `FREEXDB`, `freepdb1` y el GUID `55e54f...` que usa OMF).
+
+### Punto de control: los dos errores esperados del arranque por etapas
+
+- **ORA-01507 (`database not mounted`) en NOMOUNT:** `v$database` es una vista que lee el control file, y en NOMOUNT el control file todavía no está abierto. En cambio `v$parameter` sí responde porque sus valores ya están en la memoria de la instancia (los leyó del SPFILE al arrancar). Por eso la etapa existe: sin control file no hay nada que "montar".
+- **ORA-01219 en MOUNT:** `dba_tables` es una vista del diccionario, y el diccionario vive en las tablas de SYSTEM, que están en un datafile que sigue cerrado. En MOUNT solo funcionan las vistas fijas (V$/X$), que leen memoria y control file.
+
+Y FREEPDB1 se abrió sola tras `ALTER DATABASE OPEN`: no es magia, es el estado guardado (`dba_pdb_saved_states` lo confirma con STATE = OPEN), que es exactamente lo que comprobamos en la Parte C al recrear el contenedor.
+
+### Reto - El parte del reinicio (a partir del alert log)
+
+- **¿A qué hora se pidió la parada?** 2026-10-24T11:21:03.446Z, con `SHUTDOWN IMMEDIATE` desde `sqlplus@f49e437017b9` (mi sesión de la Parte E.3). El mensaje "further logons disabled" confirma el cierre ordenado.
+- **¿Cuánto tardó en abrir la base?** El arranque empezó a las 11:21:08.358Z y `ALTER DATABASE OPEN` se completó a las 11:21:12.459Z: unos 4 segundos desde que nace la instancia hasta OPEN; unos 9 segundos de downtime total contando la parada (11:21:03 → 11:21:12).
+- **¿Hubo recuperación de instancia?** No en el sentido fuerte: el cierre fue limpio (`SHUTDOWN IMMEDIATE` hace checkpoint). El mensaje "Crash Recovery excluding pdb 2/3 which was cleanly closed" es el paso normal de recuperación de hilo que Oracle ejecuta siempre al abrir, con redo de sobra disponible (y además estamos en ARCHIVELOG): no hubo transacciones que recuperar.
+- **Errores, clasificados:**
+  - `ORA-00800 [Set Priority Failed] [VKTM] / [LGWR]` → **conocido, se excluye de alertas**: el contenedor no tiene la capacidad `CAP_SYS_NICE` para subir la prioridad de esos procesos. Es un aviso "soft", la base funciona con normalidad.
+  - `ORA-27302 / ORA-27303 (spstp:9, chdir() = 2)` → **a investigar, pero localizado**: solo apareció en el primer arranque dentro del contenedor recreado (OS id 39), un `chdir` a un directorio inexistente (error 2 = ENOENT) durante el arranque de procesos servidor. No se ha repetido en ningún arranque posterior y la base abre y sirve correctamente; lo dejo documentado y vigilado, que es lo que haría con un aviso raro de una imagen de contenedor.
+
+### Preguntas tipo examen P3, P4 y P5
+
+**P3: respuestas A y C.**
+- A correcta: `STARTUP_TIME` es de la instancia; cada `STARTUP` la cambia (mi evidencia lo muestra: 11:12:24 tras recrear el contenedor).
+- B incorrecta: el DBID identifica a la BASE y sobrevive a recrear el contenedor (lo comprobé: mismo `1509902213` antes y después de la Parte C).
+- C correcta: `CREATED` es de la base (2026-07-05, fecha de construcción de la imagen), no de su arranque.
+- D incorrecta: una instancia monta UNA base; dos instancias del mismo clúster RAC comparten una base, no al revés.
+- E incorrecta: `v$database` se puede consultar en MOUNT (lo vi en la etapa 3: devuelve `FREE MOUNTED NOARCHIVELOG/ARCHIVELOG`).
+
+**P4: respuestas A y C.**
+- A correcta: en NOMOUNT los parámetros ya están en memoria (SPFILE leído), `v$parameter` responde.
+- C correcta: recrear el control file es justo el uso clásico de NOMOUNT: `CREATE CONTROLFILE` necesita la instancia sin los control files originales montados.
+- B y E incorrectas: `dba_users`/diccionario requieren OPEN (datafiles de SYSTEM abiertos).
+- D incorrecta: `ALTER DATABASE ARCHIVELOG` exige MOUNT (el control file debe estar abierto y la base desmontable).
+
+**P5: respuesta B (MOUNT).** El commando reescribe la cabecera de los control files y el modo de registro, así que necesita los control files abiertos (MOUNT) y la base no debe estar OPEN.

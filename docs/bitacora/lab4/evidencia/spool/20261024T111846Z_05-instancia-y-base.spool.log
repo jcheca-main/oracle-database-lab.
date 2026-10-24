@@ -1,0 +1,33 @@
+SQL Format Cleared
+== 1. La INSTANCIA: procesos + memoria, vive mientras está arrancada ==
+
+INSTANCE_NAME    HOST_NAME      VERSION_FULL      STATUS       DATABASE_STATUS   ARRANCADA          
+---------------- -------------- ----------------- ------------ ----------------- -------------------
+FREE             f49e437017b9   23.26.3.0.0       OPEN         ACTIVE            2026-10-24 11:12:24
+== 2. La BASE DE DATOS: archivos en disco, existe aunque la instancia esté parada ==
+
+      DBID NAME             DB_UNIQUE_NAME                 CDB LOG_MODE     OPEN_MODE            PLATFORM_NAME          CREADA    
+---------- ---------------- ------------------------------ --- ------------ -------------------- ---------------------- ----------
+1509902213 FREE             FREE                           YES ARCHIVELOG   READ WRITE           Linux x86 64-bit       2026-07-05
+== 3. ¿Dónde estoy y con quién? ==
+
+CONTENEDOR SERVICIO     USUARIO      SID   
+---------- ------------ ------------ ------
+CDB$ROOT   free         C##OPS_RO    210   
+== 4. Servicios que la instancia ofrece (LREG los registra en el listener) ==
+
+    CON_ID NAME             NETWORK_NAME    
+---------- ---------------- ----------------
+         1 SYS$BACKGROUND                   
+         1 SYS$USERS                        
+         1 free             free            
+         1 freeXDB          freeXDB         
+         3 freepdb1         freepdb1        
+== 5. Los archivos que forman la base de datos ==
+
+TIPO                     N         MB
+--------------- ---------- ----------
+datafiles               16       3984
+tempfiles                3         60
+redo (miembros)          3           
+control files            2           
