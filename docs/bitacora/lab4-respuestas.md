@@ -390,3 +390,59 @@ Procedimiento: `SHUTDOWN IMMEDIATE` (consistente, sin recuperación: P1 de la Pa
 **P17: respuesta C.** Sin ARCHIVELOG no hay redo antiguo en disco fuera de los online redo: restaurar la última copia completa es lo único posible y todo lo cambiado después se pierde. A falsa (RECOVER DATABASE necesita archivado o al menos los online redo intactos), B falsa (`CREATE CONTROLFILE` reconstruye el índice, no los datos), D falsa (sin FRA y sin archivado no hay copias automáticas).
 
 Evidencias: `11-ampliar-ops-ro.script.log`, `11-archivos-so.script.log`, `11-dbs-enlaces.script.log` y el spool `11-archivos`.
+
+## Parte K - Anatomía de una página: del tablespace al byte
+
+### K.1 - Del tablespace a la fila (mi salida)
+
+Los seis `TBS_*` de negocio son **PERMANENT, BIGFILE (predeterminado en 23ai), LOCAL/SYSTEM (AUTOALLOCATE) y SSM = AUTO (ASSM)** con `block_size = 8192`; `SYSTEM`, `SYSAUX` y `UNDOTBS1` van con gestión manual de espacio y `TEMP` con extensiones UNIFORM. `ACA_ESTUDIANTES` ocupa **17 extensiones / 256 bloques / 2048 KB**: las 16 primeras de 8 bloques (64 KB) y la última de 128 bloques (1 MB) — el AUTOALLOCATE agranda la extensión a medida que el segmento crece.
+
+**La fila 101:** `ROWID = AAAR2mAAAAAAAMNAAF`, `data_object_id = 73126` (= `0x11da6`, el objeto `ADMIN_ACADEMIA.ACA_ESTUDIANTES`), **archivo 16** (`academia01.dbf`, `relative_fno = 1024` porque es BIGFILE), **bloque 781** (`0x30d`), **ranura 5** (fila_en_bloque = 5). El bloque 781 cae en la extensión 0 (bloques 776-783). Tamaño de fila: **68 bytes de datos** (`VSIZE` sumado) frente a `AVG_ROW_LEN = 76`.
+
+**Llenado (`DBMS_SPACE.SPACE_USAGE`):** 227 llenos + 3 FS1 + 1 FS2 + 13 FS4 = **244 bloques**, la misma cifra que dio el `v$bh` de la Parte G. Los 13 casi vacíos son el final del segmento: espacio ya asignado que la tabla aún no llena, y un full scan los recorre igual porque llega hasta la HWM, no hasta la última fila.
+
+### K.2 - El ROWID por dentro
+
+`AAAR2m AAA AAAAMN AAF` (fila 101): `AAAR2m` = 17·64² + 54·64 + 38 = **73126** (el `DATA_OBJECT_ID`, confirmado por `dba_objects`); el grupo de archivo `AAA` = 0 (en BIGFILE esos bits son parte del bloque); `AAAAMN` = 12·64 + 13 = **781** y `AAAF` = 5 → bloque 781, ranura 5. (En el reto, la misma fila decodificada da bloque **1165** y ranura **77**.) Decodificado con `DBMS_ROWID`: `ROWID_TO_ABSOLUTE_FNO` = 16 (el file_id real) y `ROWID_BLOCK_NUMBER(..., 'BIGFILE')` = 781. Sin el segundo argumento `'BIGFILE'` el bloque saldría mal (es la trampa de P18) y `ROWID_RELATIVE_FNO` daría 1024, que no es un `file_id`.
+
+### K.3 - La fila byte a byte y el llenado
+
+`DUMP(...,16)`: `ESTUDIANTE_ID Typ=2 Len=3: c2,02,02` (NUMBER en base 100 con exceso: el primer byte fija el exponente `0xc2−193 = 1` y los dígitos son cada byte menos uno, `02→1`, así que `1·100 + 1 = 101`; en el reto, 19500 sale `c3,02,60` = `1·100² + 95·100`), `DNI Typ=1 Len=9` en ASCII (`30,30,30,30,30,31,30,31,58` = "00000101X"), `ESTADO Typ=1 Len=6` = "ACTIVO" y `FECHA_REGISTRO Typ=180 Len=11` (TIMESTAMP(6)).
+
+### K.4 - El volcado real del bloque 781 (traza de 2860 líneas)
+
+- **[A] Cabecera + ITL:** `Block header dump: 0x0000030d` = **781**, el mismo que `DBMS_ROWID`; `seg/obj: 0x11da6` = **73126**; `typ: 1 - DATA`; `itc: 2`. Ranura **0x01**: `Xid 0x000a.013.00000238`, `Flag --U-`, **`Lck 90`** (la transacción de V002 sigue marcando las 90 filas); ranura **0x02**: `Xid 0` (libre).
+- **[B] Cabecera de datos:** `tsiz: 0x1f98 = 8088` (8192 − 100 de cabecera/ITL − 4 de cola), `hsiz: 0xc6 = 198` (14 + 4 + 90×2), **`nrow = 90`**, `fsbo = 0xc6`, `fseo = 0x427 = 1063`, `avsp = tosp = 0x361 = 865`. `pri[5] offs = 0x1cda` apunta a la fila 101.
+- **[C] La fila 5:** `tl: 78 fb: --H-FL-- lb: 0x1 cc: 7`: 3 (cabecera) + 7 (1 byte por columna) + 68 (datos) = **78 bytes**; `--H-FL--` = Head+First+Last (fila entera en este bloque, no migrada); `lb: 0x1` = ranura de ITL que la bloqueó. 78 + 2 del directorio = **80 bytes por fila**: 865 libres − 80 = 785 < 809 (el 10 % de 8088 que reserva PCTFREE 10), por eso el bloque se queda en 90 filas.
+
+**Limpieza diferida de bloques (delayed block cleanout):** la transacción de V002 está confirmada (`--U-`) pero `Lck` sigue en 90: el COMMIT de V002 no recorrió los bloques, solo escribió su redo. La próxima sesión que modifique el bloque comprobará en el undo que la transacción terminó y limpiará; mientras, un `SELECT` puntual puede generar redo al limpiar bloques.
+
+### Punto de control - interpretar mi volcado
+
+1. **`avsp = fseo − fsbo`:** `0x427 − 0xc6 = 1063 − 198 = 865 = 0x361` ✓ (en el bloque 1165 del reto: `0x3f6 − 0xbc = 1014 − 188 = 826 = 0x33a` ✓). Y `avsp = tosp` = 865: el hueco libre es continuo, no hay fragmentación interna.
+2. **Fecha de la fila 101 desde los 7 primeros bytes de la columna 6** (`78,7e,0a,18,c,12,18`): siglo = 120−100 = 20, año = 126−100 = 26, mes = 10, día = 24, hora = 12−1 = 11, minuto = 18−1 = 17, segundo = 24−1 = 23 → **`24-10-2026 11:17:23`** (y `.827145` en los 4 bytes restantes). Lo comprobé con `TO_CHAR(fecha_registro,...)` y coincide **exactamente con la ejecución de V002 a las 11:17:23Z** (evidencia `...111723Z_002...`): la fila lleva el instante en que se cargó. Ojo con hora, minuto y segundo: se guardan **+1** (exces-1); sin restar ese 1 la fecha sale desplazada una hora.
+3. **Si hago un `UPDATE` de la fila 101:** usará la **ranura ITL libre 0x02** (hoy `Xid 0`), sin esperar a nadie. El `Lck 90` de la ranura 1 **no la bloquea**: esa transacción ya está cerrada (`--U-`), el bloqueo es residual de la limpieza diferida y se borrará cuando alguien limpie el bloque (justo al modificarse). Solo si hubiera `MAXTRANS` transacciones concurrentes en el bloque crecería la ITL a costa del espacio libre que reserva `INITRANS`/`PCTFREE`.
+
+### Reto - Abrir otro bloque (estudiante 19500)
+
+`12-bloque-reto.sql` (copia con `estudiante_id = 19500` y traza propia `lab4_bloque_reto`):
+
+| | Bloque 781 (fila 101) | Bloque 1165 (fila 19500) |
+|---|---|---|
+| Fila en el bloque | 5 | 77 |
+| `nrow` | 90 | **85** |
+| `hsiz` | 0xc6 (198) | 0xbc (188) |
+| `fseo` / `fsbo` | 0x427 / 0xc6 | 0x3f6 / 0xbc |
+| `avsp` (= `tosp`) | 0x361 (865 B) | **0x33a (826 B)** |
+| `tl` de la fila | 78 | **84** |
+| ITL | `0x000a.013.00000238`, `--U-`, **Lck 90** | **misma Xid**, `--U-`, **Lck 85** |
+
+Lectura: caben 5 filas menos porque la fila 19500 es **6 bytes más larga** (nombres `Nombre19500` 11 vs 9, email 21 vs 19, estado `EGRESADO` 8 vs 6 → `tl` 84 frente a 78) y cada fila ocupa 2 bytes extra en el directorio. **La limpieza diferida se ve igual:** misma transacción de V002, `--U-` confirmada y las 85 filas aún marcadas (`Lck 85`, `lb: 0x1`): el bloque todavía no ha sido limpiado. Traza guardada como evidencia extra (`12-reto-volcado-bloque.trc.txt`, 2934 líneas).
+
+### Preguntas tipo examen P18 y P19
+
+**P18: respuesta B.** Sin el segundo argumento la función asume SMALLFILE y reparte los bits del ROWID entre "archivo relativo" y "bloque": en un tablespace BIGFILE hay un solo archivo, así que hay que pasar `'BIGFILE'` (y el archivo real sale con `ROWID_TO_ABSOLUTE_FNO`). A falsa (el ROWID sí lleva bloque), C y D falsas.
+
+**P19: respuestas A y B.** PCTFREE 10 = "dejo de insertar cuando queda menos del 10 % libre" (A) y ese espacio está reservado para que las filas existentes crezcan con `UPDATE` (B). C falsa (el espacio de la ITL lo fija `INITRANS`, no PCTFREE), D falsa (también afecta a índices... en realidad se aplica a tablas e índices de heap; en todo caso PCTFREE no es exclusivo de nada), E falsa (con PCTFREE 10 una fila que crezca demasiado igual migra: `--H-FL--` deja de serlo).
+
+Evidencias: `12-bloque.script.log`, `12-reto-bloque.script.log`, `12-volcado-bloque.trc.txt` y `12-reto-volcado-bloque.trc.txt`.
