@@ -61,3 +61,18 @@ Revisé el defecto 5 del documento del Lab 3 (K.2): en mi repo ya estaba bien (`
 - A incorrecta: `MOVE DATAFILE` online requiere Enterprise Edition; la base es Standard y además habría estado indisponible igualmente.
 - C incorrecta: `RENAME DATAFILE` no copia nada y el tablespace debe estar OFFLINE.
 - D incorrecta: `SHUTDOWN ABORT` no hace checkpoint y obligaría a recuperación de instancia; además el tablespace se puede manejar con la base abierta.
+
+### Reto - Que no vuelva a pasar (OMF, commit propio)
+
+**Medida aplicada:** fijar el destino por defecto de archivos en la PDB de trabajo:
+
+```sql
+ALTER SESSION SET CONTAINER = FREEPDB1;
+ALTER SYSTEM SET db_create_file_dest = '/opt/oracle/oradata/FREE/FREEPDB1' SCOPE = BOTH;
+```
+
+**Por qué ese SCOPE:** `BOTH` porque es un cambio de configuración con valor definitivo, no una prueba: quiero que ya esté activo y que siga tras el próximo arranque (si solo usara `MEMORY`, desaparecería al reiniciar; con solo `SPFILE`, no serviría hasta el siguiente arranque y ya hay que estar protegido).
+
+**Qué cambia en el próximo `CREATE TABLESPACE tbs_x` sin cláusula DATAFILE:** sin OMF fallaría con ORA-02236 (missing path name) y quien tuviera prisa escribiría una ruta relativa, repitiendo el defecto 1. Con OMF, Oracle elige nombre y ubicación él solo dentro de `db_create_file_dest`. Lo demostré con `CREATE TABLESPACE tbs_prueba_omf;` (sin DATAFILE): creó `/opt/oracle/oradata/FREE/FREEPDB1/FREE/55E54F.../datafile/o1_mf_tbs_prue_ofs4v0tc_.dbf`, 100 MB autoextensible, y lo borró junto con el tablespace con `DROP TABLESPACE ... INCLUDING CONTENTS AND DATAFILES`.
+
+Detalle del entorno: OMF está activo solo en FREEPDB1, que es donde vive el negocio (los datafiles de la raíz ya estaban en su carpeta estándar). Evidencia: `03b-activar-omf.script.log`.
