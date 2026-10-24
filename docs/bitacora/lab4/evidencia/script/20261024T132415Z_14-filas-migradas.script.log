@@ -1,0 +1,68 @@
+
+===== 1. Tabla con PCTFREE 0 (sin hueco para crecer) y filas cortas =====
+
+TABLE_NAME     NUM_ROWS     BLOCKS   PCT_FREE AVG_ROW_LEN  CHAIN_CNT
+------------ ---------- ---------- ---------- ----------- ----------
+MIGRA              5000         13          0           9          0
+(CHAIN_CNT solo lo rellena ANALYZE; DBMS_STATS no lo calcula)
+
+===== 2. Una de cada cinco filas crece de 1 a 300 bytes: no cabe en su bloque y MIGRA =====
+
+TABLE_NAME     NUM_ROWS     BLOCKS   PCT_FREE AVG_ROW_LEN  CHAIN_CNT PCT_MIGRADAS
+------------ ---------- ---------- ---------- ----------- ---------- ------------
+MIGRA              5000         58          0          70       1000           20
+
+===== 3. Detectarlas fila a fila: ANALYZE ... LIST CHAINED ROWS (tabla CHAINED_ROWS, como utlchain.sql) =====
+
+FILAS_LISTADAS
+--------------
+          1000
+
+
+
+
+        ID ROWID_CABEZA          ARCHIVO     BLOQUE     RANURA
+---------- ------------------ ---------- ---------- ----------
+         5 AAAR/3AAAAAABYLAAE         25       5643          4
+
+===== 4. El coste: cada acceso por ROWID a una fila migrada hace una lectura lógica EXTRA =====
+1000 b??squedas por clave: "table fetch continued row" = 200 | lecturas l??gicas = 3200 (3.2 por b??squeda)
+
+===== 5. Verlo en el bloque: la cabeza de la fila se queda y apunta a su nuevo sitio (nrid) =====
+
+
+
+tab 0, row 4, @0x1f6f
+tl: 9 fb: --H----- lb: 0x2  cc: 0
+nrid:  0x00001623.25a
+(fb: --H----- = solo la cabeza (Head): sin F/L la fila no está aquí; nrid = archivo.bloque.ranura donde vive ahora.
+Una fila normal tiene fb: --H-FL-- (Head, First y Last piece en el mismo bloque).)
+
+===== 6. ENCADENAMIENTO de verdad: una fila de ~12 000 bytes no cabe en NINGÚN bloque de 8 KB =====
+
+TABLE_NAME     NUM_ROWS     BLOCKS AVG_ROW_LEN  CHAIN_CNT
+------------ ---------- ---------- ----------- ----------
+ANCHA                 2          5        6016          1
+(Reorganizar NO cura el encadenamiento: solo un bloque mayor (tablespace de 16/32 KB) o rediseñar la tabla)
+
+===== 7. Curar la MIGRACIÓN: ALTER TABLE ... MOVE reescribe las filas (y deja los índices UNUSABLE) =====
+
+INDEX_NAME       STATUS
+---------------- ---------
+PK_MIGRA         UNUSABLE
+(Las filas tienen ROWID nuevo y el índice apunta a los viejos: UNUSABLE. Una consulta que lo necesite fallaría o haría FULL SCAN)
+
+INDEX_NAME       STATUS
+---------------- ---------
+PK_MIGRA         VALID
+
+TABLE_NAME     NUM_ROWS     BLOCKS   PCT_FREE AVG_ROW_LEN  CHAIN_CNT
+------------ ---------- ---------- ---------- ----------- ----------
+MIGRA              5000         63         20          69          0
+(En producción: ALTER TABLE ... MOVE ONLINE mantiene los índices válidos y no bloquea el DML)
+
+===== 8. Limpieza: se borra el banco de pruebas del Lab 4 (esquema y tablespace con su archivo) =====
+
+TBS_LAB4_RESTANTES
+------------------
+                 0

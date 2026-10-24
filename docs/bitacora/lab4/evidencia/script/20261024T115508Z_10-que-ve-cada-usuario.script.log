@@ -1,0 +1,141 @@
+
+===== 0. Preparación (como SYSDBA): un usuario LOCAL en FREEPDB1 y uno COMÚN sin CONTAINER_DATA =====
+Usuarios de prueba creados (contraseña aleatoria, no se muestra ni se guarda)
+
+===== 1. SYS en la raíz: ¿dónde estoy y qué ve V$? =====
+
+CON_NAME   CON_ID_ACTUAL
+---------- -------------
+CDB$ROOT   1
+
+    CON_ID  DATAFILES
+---------- ----------
+	 1	    4
+	 2	    3
+	 3	    9
+(CON_ID 1 = CDB$ROOT, 2 = PDB$SEED, 3 = FREEPDB1; 0 = dato de toda la CDB, sin contenedor concreto)
+
+    CON_ID FILAS_EN_V_LOG
+---------- --------------
+	 0		3
+
+===== 2. SYS dentro de FREEPDB1: las mismas vistas, otra respuesta =====
+
+CON_NAME   CON_ID_ACTUAL
+---------- -------------
+FREEPDB1   3
+
+    CON_ID  DATAFILES
+---------- ----------
+	 3	    9
+
+TABLESPACES_DBA
+---------------
+	     10
+
+    CON_ID TABLESPACES_CDB
+---------- ---------------
+	 3		10
+(dentro de una PDB, CDB_ = DBA_: solo se ve la propia PDB)
+
+===== 3. Usuario LOCAL con solo CREATE SESSION (lab4_analista @ freepdb1) =====
+
+QUIEN					     CON_NAME
+-------------------------------------------- ----------
+LAB4_ANALISTA				     FREEPDB1
+
+PRUEBA						    FILAS
+---------------------------------------------- ----------
+USER_TABLES (lo m??o)					0
+ALL_TABLES de ADMIN_ACADEMIA (lo accesible)		0
+-- 3a. DBA_TABLES y V$SESSION: ORA-00942 esperado (no "sin privilegios": Oracle no revela lo que no puedes ver)
+SELECT COUNT(*) FROM dba_tables
+                     *
+ERROR at line 1:
+ORA-00942: table or view "SYS"."DBA_TABLES" does not exist
+Help: https://docs.oracle.com/error-help/db/ora-00942/
+
+
+SELECT COUNT(*) FROM v$session
+                     *
+ERROR at line 1:
+ORA-00942: table or view "SYS"."V_$SESSION" does not exist
+Help: https://docs.oracle.com/error-help/db/ora-00942/
+
+
+-- 3b. Leer una tabla de negocio: ORA-00942 esperado
+SELECT COUNT(*) FROM admin_academia.aca_estudiantes
+                                    *
+ERROR at line 1:
+ORA-00942: table or view "ADMIN_ACADEMIA"."ACA_ESTUDIANTES" does not exist
+Help: https://docs.oracle.com/error-help/db/ora-00942/
+
+
+-- 3c. Saltar a la raíz: ORA-01031 esperado (no tiene SET CONTAINER y además no existe en la raíz)
+ERROR:
+ORA-01031: insufficient privileges
+Help: https://docs.oracle.com/error-help/db/ora-01031/
+
+
+
+===== 4. Privilegio de ESQUEMA (novedad de 23ai): leer TODO ADMIN_ACADEMIA y nada más =====
+
+OWNER		 TABLE_NAME
+---------------- ------------------
+ADMIN_ACADEMIA	 ACA_ASIGNATURAS
+ADMIN_ACADEMIA	 ACA_ESTUDIANTES
+ADMIN_ACADEMIA	 ACA_MATRICULAS
+
+ESTUDIANTES
+-----------
+      20000
+-- 4a. Otro esquema sigue cerrado: ORA-00942 esperado
+SELECT COUNT(*) FROM admin_clinica.cli_pacientes
+                                   *
+ERROR at line 1:
+ORA-00942: table or view "ADMIN_CLINICA"."CLI_PACIENTES" does not exist
+Help: https://docs.oracle.com/error-help/db/ora-00942/
+
+
+-- 4b. Leer no es escribir: ORA-41900 esperado (23ai: el mensaje dice exactamente qué privilegio falta)
+UPDATE admin_academia.aca_estudiantes SET estado = estado WHERE estudiante_id = 101
+                      *
+ERROR at line 1:
+ORA-41900: missing UPDATE privilege on "ADMIN_ACADEMIA"."ACA_ESTUDIANTES"
+Help: https://docs.oracle.com/error-help/db/ora-41900/
+
+
+
+===== 5. Usuario COMÚN sin CONTAINER_DATA (c##lab4_auditor) frente a C##OPS_RO =====
+
+QUIEN					     CON_NAME
+-------------------------------------------- ----------
+C##LAB4_AUDITOR 			     CDB$ROOT
+
+    CON_ID TABLESPACES_CDB
+---------- ---------------
+	 1		 5
+
+    CON_ID   SESIONES
+---------- ----------
+	 0	   87
+	 1	    3
+(sin CONTAINER_DATA, un usuario común en la raíz solo ve los datos de la raíz y los de CON_ID 0)
+-- 5a. Con SET CONTAINER sí puede entrar en la PDB y mirar desde dentro
+
+CON_NAME   TABLESPACES
+---------- -----------
+FREEPDB1	    10
+
+===== 6. Lo que tiene C##OPS_RO y no tiene c##lab4_auditor =====
+
+USERNAME	 DEFAULT_ATTR ALL_CONTAINERS
+---------------- ------------ --------------
+C##OPS_RO	 Y	      Y
+(C##LAB4_AUDITOR no aparece: no tiene atributo CONTAINER_DATA. Se lo daría ALTER USER ... SET CONTAINER_DATA = ALL)
+
+===== 7. Limpieza: se borran los dos usuarios de prueba =====
+
+USUARIOS_LAB4_RESTANTES
+-----------------------
+		      0

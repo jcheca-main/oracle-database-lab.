@@ -1,0 +1,7 @@
+SQL Format Cleared
+== Sentencias con más de 50 cursores distintos que comparten la misma forma (force_matching_signature) ==
+
+                           FIRMA CURSORES_DISTINTOS EJECUCIONES_TOTALES KB_SHARED_POOL EJEMPLO                                                       
+-------------------------------- ------------------ ------------------- -------------- --------------------------------------------------------------
+                      1.8632E+18                426                 426          15165 SELECT /* lab4_literal */ COUNT(*) FROM admin_academia.aca_est
+(Firma 0 es "sin firma": cada sentencia, una forma. Los literales quedan ocultos tras la misma firma)

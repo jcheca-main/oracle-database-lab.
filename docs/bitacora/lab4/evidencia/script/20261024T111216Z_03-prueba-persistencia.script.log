@@ -1,0 +1,60 @@
+== 1. ANTES: entornos de negocio ==
+
+TABLESPACE_NAM FILE_NAME						  MB ONLINE_S
+-------------- -------------------------------------------------- ---------- --------
+TBS_ACADEMIA   /opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf 	 100 ONLINE
+TBS_CLINICA    /opt/oracle/oradata/FREE/FREEPDB1/clinica01.dbf		 100 ONLINE
+TBS_FINTECH    /opt/oracle/oradata/FREE/FREEPDB1/fintech01.dbf		 100 ONLINE
+TBS_LOGISTICA  /opt/oracle/oradata/FREE/FREEPDB1/logistica01.dbf	 100 ONLINE
+TBS_RETAIL     /opt/oracle/oradata/FREE/FREEPDB1/retail01.dbf		 100 ONLINE
+
+OWNER		     TABLAS
+---------------- ----------
+ADMIN_ACADEMIA		  3
+ADMIN_CLINICA		  3
+ADMIN_FINTECH		  2
+ADMIN_LOGISTICA 	  3
+ADMIN_RETAIL		  3
+
+ESTUDIANTES ESTADO_FILA_101
+----------- --------------------
+	  0
+== 2. Parada limpia (SHUTDOWN IMMEDIATE) y borrado del contenedor; el volumen oralab-26ai-data se conserva ==
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+oralab-26ai
+DRIVER    VOLUME NAME
+local     oralab-26ai-data
+== 3. Recrear el contenedor con la definición corregida ==
+El volumen oralab-26ai-data ya contiene la base FREE: se reutiliza (sin contraseñas).
+f49e437017b9db50ee9742443c2b54097ecf83c246993cd4693b9079c80d69fd
+Contenedor oralab-26ai creado.
+CONTAINER ID   IMAGE                                                COMMAND                  CREATED        STATUS                                     PORTS                                         NAMES
+f49e437017b9   container-registry.oracle.com/database/free:latest   "/bin/bash -c $SCRIP…"   1 second ago   Up Less than a second (health: starting)   0.0.0.0:1521->1521/tcp, [::]:1521->1521/tcp   oralab-26ai
+  t=0s  docker=starting  cdb/pdb=no-disponible
+  t=10s  docker=healthy  cdb/pdb=READWRITE/READWRITE
+== 4. DESPUÉS: mismos entornos, mismos datos ==
+
+TABLESPACE_NAM FILE_NAME						  MB ONLINE_S
+-------------- -------------------------------------------------- ---------- --------
+TBS_ACADEMIA   /opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf 	 100 ONLINE
+TBS_CLINICA    /opt/oracle/oradata/FREE/FREEPDB1/clinica01.dbf		 100 ONLINE
+TBS_FINTECH    /opt/oracle/oradata/FREE/FREEPDB1/fintech01.dbf		 100 ONLINE
+TBS_LOGISTICA  /opt/oracle/oradata/FREE/FREEPDB1/logistica01.dbf	 100 ONLINE
+TBS_RETAIL     /opt/oracle/oradata/FREE/FREEPDB1/retail01.dbf		 100 ONLINE
+
+OWNER		     TABLAS
+---------------- ----------
+ADMIN_ACADEMIA		  3
+ADMIN_CLINICA		  3
+ADMIN_FINTECH		  2
+ADMIN_LOGISTICA 	  3
+ADMIN_RETAIL		  3
+
+ESTUDIANTES ESTADO_FILA_101
+----------- --------------------
+	  0
+== 5. Puertos publicados ahora (ya no aparece 8181) ==
+1521/tcp -> 0.0.0.0:1521
+1521/tcp -> [::]:1521

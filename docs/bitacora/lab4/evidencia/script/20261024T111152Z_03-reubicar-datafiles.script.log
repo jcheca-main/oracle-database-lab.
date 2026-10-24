@@ -1,0 +1,130 @@
+== 1. Datafiles de negocio fuera de /opt/oracle/oradata/FREE/FREEPDB1 ==
+TBS_ACADEMIA|/opt/oracle/product/26ai/dbhomeFree/dbs/academia01.dbf
+TBS_CLINICA|/opt/oracle/product/26ai/dbhomeFree/dbs/clinica01.dbf
+TBS_FINTECH|/opt/oracle/product/26ai/dbhomeFree/dbs/fintech01.dbf
+TBS_LOGISTICA|/opt/oracle/product/26ai/dbhomeFree/dbs/logistica01.dbf
+TBS_RETAIL|/opt/oracle/product/26ai/dbhomeFree/dbs/retail01.dbf
+== 2. TBS_ACADEMIA: /opt/oracle/product/26ai/dbhomeFree/dbs/academia01.dbf -> /opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf ==
+   a) tablespace OFFLINE (checkpoint del tablespace: el archivo queda consistente)
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+   b) copia física conservando permisos (el original NO se borra todavía)
+   c) el control file apunta a la nueva ruta, tablespace ONLINE y techo de 1 GB
+
+Session altered.
+
+
+Tablespace altered.
+
+
+Tablespace altered.
+
+
+Database altered.
+
+   d) ONLINE correcto (Oracle validó la cabecera del archivo): se borra el original
+== 2. TBS_CLINICA: /opt/oracle/product/26ai/dbhomeFree/dbs/clinica01.dbf -> /opt/oracle/oradata/FREE/FREEPDB1/clinica01.dbf ==
+   a) tablespace OFFLINE (checkpoint del tablespace: el archivo queda consistente)
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+   b) copia física conservando permisos (el original NO se borra todavía)
+   c) el control file apunta a la nueva ruta, tablespace ONLINE y techo de 1 GB
+
+Session altered.
+
+
+Tablespace altered.
+
+
+Tablespace altered.
+
+
+Database altered.
+
+   d) ONLINE correcto (Oracle validó la cabecera del archivo): se borra el original
+== 2. TBS_FINTECH: /opt/oracle/product/26ai/dbhomeFree/dbs/fintech01.dbf -> /opt/oracle/oradata/FREE/FREEPDB1/fintech01.dbf ==
+   a) tablespace OFFLINE (checkpoint del tablespace: el archivo queda consistente)
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+   b) copia física conservando permisos (el original NO se borra todavía)
+   c) el control file apunta a la nueva ruta, tablespace ONLINE y techo de 1 GB
+
+Session altered.
+
+
+Tablespace altered.
+
+
+Tablespace altered.
+
+
+Database altered.
+
+   d) ONLINE correcto (Oracle validó la cabecera del archivo): se borra el original
+== 2. TBS_LOGISTICA: /opt/oracle/product/26ai/dbhomeFree/dbs/logistica01.dbf -> /opt/oracle/oradata/FREE/FREEPDB1/logistica01.dbf ==
+   a) tablespace OFFLINE (checkpoint del tablespace: el archivo queda consistente)
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+   b) copia física conservando permisos (el original NO se borra todavía)
+   c) el control file apunta a la nueva ruta, tablespace ONLINE y techo de 1 GB
+
+Session altered.
+
+
+Tablespace altered.
+
+
+Tablespace altered.
+
+
+Database altered.
+
+   d) ONLINE correcto (Oracle validó la cabecera del archivo): se borra el original
+== 2. TBS_RETAIL: /opt/oracle/product/26ai/dbhomeFree/dbs/retail01.dbf -> /opt/oracle/oradata/FREE/FREEPDB1/retail01.dbf ==
+   a) tablespace OFFLINE (checkpoint del tablespace: el archivo queda consistente)
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+   b) copia física conservando permisos (el original NO se borra todavía)
+   c) el control file apunta a la nueva ruta, tablespace ONLINE y techo de 1 GB
+
+Session altered.
+
+
+Tablespace altered.
+
+
+Tablespace altered.
+
+
+Database altered.
+
+   d) ONLINE correcto (Oracle validó la cabecera del archivo): se borra el original
+== 3. Resultado ==
+
+TABLESPACE_NAM FILE_NAME					  STATUS    AUT 	MB     MAX_MB
+-------------- -------------------------------------------------- --------- --- ---------- ----------
+TBS_ACADEMIA   /opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf   AVAILABLE YES        100	 1024
+TBS_CLINICA    /opt/oracle/oradata/FREE/FREEPDB1/clinica01.dbf	  AVAILABLE YES        100	 1024
+TBS_FINTECH    /opt/oracle/oradata/FREE/FREEPDB1/fintech01.dbf	  AVAILABLE YES        100	 1024
+TBS_LOGISTICA  /opt/oracle/oradata/FREE/FREEPDB1/logistica01.dbf  AVAILABLE YES        100	 1024
+TBS_RETAIL     /opt/oracle/oradata/FREE/FREEPDB1/retail01.dbf	  AVAILABLE YES        100	 1024

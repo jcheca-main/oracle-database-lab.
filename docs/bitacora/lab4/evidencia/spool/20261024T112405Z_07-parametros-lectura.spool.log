@@ -1,0 +1,61 @@
+SQL Format Cleared
+
+== 1. ¿Arrancó con SPFILE o con PFILE? (valor vacío = PFILE) ==
+
+NAME                           VALUE                                                     
+------------------------------ ----------------------------------------------------------
+spfile                         /opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora    
+
+== 2. Parámetros que marcan la arquitectura del curso (valor efectivo en esta instancia) ==
+
+NAME                           DISPLAY_VALUE  ISDEFAULT ISMODIFIED SYS_MOD   SES_M PDB_M
+------------------------------ -------------- --------- ---------- --------- ----- -----
+compatible                     23.6.0         FALSE     FALSE      IMMEDIATE FALSE FALSE
+cpu_count                      2              TRUE      FALSE      IMMEDIATE FALSE TRUE 
+db_block_size                  8192           FALSE     FALSE      FALSE     FALSE FALSE
+db_create_file_dest                           TRUE      FALSE      IMMEDIATE TRUE  TRUE 
+db_files                       200            TRUE      FALSE      FALSE     FALSE TRUE 
+db_name                        FREE           FALSE     FALSE      FALSE     FALSE FALSE
+db_recovery_file_dest                         TRUE      FALSE      IMMEDIATE FALSE FALSE
+db_recovery_file_dest_size     0              TRUE      FALSE      IMMEDIATE FALSE FALSE
+enable_pluggable_database      TRUE           FALSE     FALSE      FALSE     FALSE FALSE
+inmemory_size                  0              TRUE      FALSE      IMMEDIATE FALSE TRUE 
+memory_size                    0              TRUE      FALSE      IMMEDIATE FALSE FALSE
+open_cursors                   300            FALSE     FALSE      IMMEDIATE FALSE TRUE 
+pga_aggregate_limit            2G             TRUE      FALSE      IMMEDIATE FALSE TRUE 
+pga_aggregate_target           512M           FALSE     FALSE      IMMEDIATE FALSE TRUE 
+processes                      200            FALSE     FALSE      IMMEDIATE FALSE FALSE
+sessions                       322            TRUE      FALSE      IMMEDIATE FALSE TRUE 
+sga_target                     1536M          FALSE     FALSE      IMMEDIATE FALSE TRUE 
+undo_retention                 900            TRUE      FALSE      IMMEDIATE FALSE TRUE 
+undo_tablespace                UNDOTBS1       FALSE     FALSE      IMMEDIATE FALSE TRUE 
+vector_memory_size             0              TRUE      FALSE      IMMEDIATE FALSE TRUE 
+
+== 3. Lo que está escrito en el SPFILE (v$spparameter: solo los especificados) ==
+
+SID  NAME                           VALUE                                                     
+---- ------------------------------ ----------------------------------------------------------
+*    compatible                     23.6.0                                                    
+*    control_files                  /opt/oracle/oradata/FREE/control01.ctl                    
+*    control_files                  /opt/oracle/oradata/FREE/control02.ctl                    
+*    db_block_size                  8192                                                      
+*    db_name                        FREE                                                      
+*    diagnostic_dest                /opt/oracle                                               
+*    dispatchers                    (PROTOCOL=TCP) (SERVICE=FREEXDB)                          
+*    enable_pluggable_database      true                                                      
+*    fast_start_parallel_rollback   FALSE                                                     
+*    local_listener                                                                           
+*    nls_language                   AMERICAN                                                  
+*    nls_territory                  AMERICA                                                   
+*    open_cursors                   300                                                       
+*    pga_aggregate_target           536870912                                                 
+*    processes                      200                                                       
+*    remote_login_passwordfile      EXCLUSIVE                                                 
+*    sga_target                     1610612736                                                
+*    undo_tablespace                UNDOTBS1                                                  
+
+== 4. Recuento: cuántos parámetros hay y cuántos no están en su valor por defecto ==
+
+DOCUMENTADOS NO_POR_DEFECTO  ESTATICOS
+------------ -------------- ----------
+         564             18        134

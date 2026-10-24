@@ -1,0 +1,46 @@
+== 1. Activo OMF en FREEPDB1 ==
+
+Session altered.
+
+
+System altered.
+
+
+CONTENEDOR
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+NAME
+--------------------------------------------------------------------------------
+VALOR
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ISMODIFIED
+----------
+FREEPDB1
+db_create_file_dest
+/opt/oracle/oradata/FREE/FREEPDB1
+SYSTEM_MOD
+
+== 2. Demostración: CREATE TABLESPACE sin cláusula DATAFILE ==
+
+Session altered.
+
+
+Tablespace created.
+
+
+TABLESPACE_NAME
+------------------------------
+FILE_NAME
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	MB AUT
+---------- ---
+TBS_PRUEBA_OMF
+/opt/oracle/oradata/FREE/FREEPDB1/FREE/55E54F210F100828E0630B00580ADFD0/datafile/o1_mf_tbs_prue_ofs4v0tc_.dbf
+       100 YES
+
+
+1 row selected.
+
+
+Tablespace dropped.
+
+== 3. tbs_prueba_omf eliminado (también su archivo, por INCLUDING CONTENTS AND DATAFILES) ==

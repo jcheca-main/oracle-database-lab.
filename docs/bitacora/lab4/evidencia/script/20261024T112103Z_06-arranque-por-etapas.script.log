@@ -1,0 +1,101 @@
+Script started on 2026-10-24 13:21:03+02:00 [COMMAND="bash scripts/ops/sysdba.sh scripts/lab4/06-arranque-por-etapas.sql" <not executed on terminal>]
+
+===== 0. Punto de partida =====
+
+INSTANCE_N STATUS	DATABASE_STATUS
+---------- ------------ -----------------
+FREE	   OPEN 	ACTIVE
+
+===== 1. SHUTDOWN IMMEDIATE: checkpoint, cierre de archivos, fin de procesos =====
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+
+===== 2. STARTUP NOMOUNT: lee el SPFILE, reserva la SGA y arranca los procesos =====
+ORACLE instance started.
+
+Total System Global Area 1603398928 bytes
+Fixed Size		    5033232 bytes
+Variable Size		  469762048 bytes
+Database Buffers	 1124073472 bytes
+Redo Buffers		    4530176 bytes
+
+INSTANCE_N STATUS
+---------- ------------
+FREE	   STARTED
+-- v$parameter ya responde (sale del SPFILE en memoria):
+
+NAME					 VALUE
+---------------------------------------- ----------------------------------------------------------------------
+spfile					 /opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora
+control_files				 /opt/oracle/oradata/FREE/control01.ctl, /opt/oracle/oradata/FREE/contr
+					 ol02.ctl
+
+db_name 				 FREE
+-- v$database todavía NO (no se ha leído el control file) -> ORA-01507 esperado:
+SELECT name, open_mode FROM v$database
+                            *
+ERROR at line 1:
+ORA-01507: database not mounted
+Help: https://docs.oracle.com/error-help/db/ora-01507/
+
+
+
+===== 3. ALTER DATABASE MOUNT: abre los control files y conoce la estructura =====
+
+INSTANCE_N STATUS
+---------- ------------
+FREE	   MOUNTED
+
+NAME					 OPEN_MODE	      LOG_MODE
+---------------------------------------- -------------------- ------------
+FREE					 MOUNTED	      ARCHIVELOG
+
+NAME
+----------------------------------------
+/opt/oracle/oradata/FREE/control01.ctl
+/opt/oracle/oradata/FREE/control02.ctl
+
+DATAFILES_CONOCIDOS
+-------------------
+		 16
+-- El diccionario (tablas de SYSTEM) todavía NO es accesible -> ORA-01219 esperado:
+SELECT COUNT(*) FROM dba_tables
+                     *
+ERROR at line 1:
+ORA-01219: Database or pluggable database not open. Queries allowed on fixed tables or views only.
+Help: https://docs.oracle.com/error-help/db/ora-01219/
+
+
+
+===== 4. ALTER DATABASE OPEN: abre datafiles y redo; recuperación de instancia si hiciera falta =====
+
+INSTANCE_N STATUS	DATABASE_STATUS
+---------- ------------ -----------------
+FREE	   OPEN 	ACTIVE
+
+NAME					 OPEN_MODE
+---------------------------------------- --------------------
+FREE					 READ WRITE
+-- Las PDB: el estado guardado (SAVE STATE) decide si FREEPDB1 se abre sola
+
+    CON_ID NAME 				    OPEN_MODE  RES
+---------- ---------------------------------------- ---------- ---
+	 2 PDB$SEED				    READ ONLY  NO
+	 3 FREEPDB1				    READ WRITE NO
+
+CON_NAME     INSTANCE_NAM STATE
+------------ ------------ --------
+FREEPDB1     FREE	  OPEN
+-- Si FREEPDB1 se quedó en MOUNTED (no había estado guardado), se abre y se guarda el estado para el próximo arranque
+FREEPDB1 abierta sola en READ WRITE: el estado guardado funciona
+
+===== 5. ¿Dónde quedó escrito todo esto? (ADR y alert log) =====
+
+NAME					 VALUE
+---------------------------------------- ----------------------------------------------------------------------
+ADR Home				 /opt/oracle/diag/rdbms/free/FREE
+Diag Trace				 /opt/oracle/diag/rdbms/free/FREE/trace
+Default Trace File			 /opt/oracle/diag/rdbms/free/FREE/trace/FREE_ora_1273.trc
+
+Script done on 2026-10-24 13:21:13+02:00 [COMMAND_EXIT_CODE="0"]

@@ -1,0 +1,25 @@
+
+Session altered.
+
+
+Session altered.
+
+V002 aplicada.
+
+PL/SQL procedure successfully completed.
+
+== Verificación ==
+
+ESTUDIANTES ASIGNATURAS MATRICULAS
+----------- ----------- ----------
+      20000	     40      60000
+
+1 row selected.
+
+
+ESTUDIANTE_ID DNI		   ESTADO
+------------- -------------------- --------------------
+	  101 00000101X 	   ACTIVO
+
+1 row selected.
+

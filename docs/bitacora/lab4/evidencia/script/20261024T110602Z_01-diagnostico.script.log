@@ -1,0 +1,47 @@
+== A. Vista SQL (SYSDBA por autenticación del sistema operativo) ==
+== 1. Instancia ==
+
+INSTANCE_NAME	 HOST_NAME	VERSION_FULL	  STATUS       ARRANQUE
+---------------- -------------- ----------------- ------------ ----------------
+FREE		 f597825d7302	23.26.3.0.0	  OPEN	       2026-10-24 11:05
+== 2. Base de datos ==
+
+NAME							       CDB LOG_MODE	OPEN_MODE
+-------------------------------------------------------------- --- ------------ --------------------
+FREE							       YES ARCHIVELOG	READ WRITE
+== 3. Contenedores ==
+
+    CON_ID NAME 							  OPEN_MODE
+---------- -------------------------------------------------------------- ----------
+	 1 CDB$ROOT							  READ WRITE
+	 2 PDB$SEED							  READ ONLY
+	 3 FREEPDB1							  READ WRITE
+== 4. Datafiles de FREEPDB1 (fíjate en la RUTA de los tablespaces TBS_*) ==
+
+     FILE# NAME 								  MB
+---------- -------------------------------------------------------------- ----------
+	12 /opt/oracle/oradata/FREE/FREEPDB1/system01.dbf			 300
+	13 /opt/oracle/oradata/FREE/FREEPDB1/sysaux01.dbf			 450
+	14 /opt/oracle/oradata/FREE/FREEPDB1/undotbs01.dbf			 100
+	15 /opt/oracle/oradata/FREE/FREEPDB1/users01.dbf			  72
+	16 /opt/oracle/product/26ai/dbhomeFree/dbs/academia01.dbf		 100
+	17 /opt/oracle/product/26ai/dbhomeFree/dbs/clinica01.dbf		 100
+	18 /opt/oracle/product/26ai/dbhomeFree/dbs/retail01.dbf 		 100
+	19 /opt/oracle/product/26ai/dbhomeFree/dbs/logistica01.dbf		 100
+	20 /opt/oracle/product/26ai/dbhomeFree/dbs/fintech01.dbf		 100
+== 5. ¿Hay destino por defecto para archivos nuevos (OMF)? ==
+
+NAME							       VALUE
+-------------------------------------------------------------- ----------------------------------------
+db_create_file_dest					       (vac??o: sin OMF)
+db_recovery_file_dest					       (vac??o: sin OMF)
+
+== B. Vista del sistema de archivos: ¿dentro o fuera del volumen (/opt/oracle/oradata)? ==
+ORACLE_SID=FREE  ORACLE_HOME=/opt/oracle/product/26ai/dbhomeFree
+DENTRO del volumen, pero en carpeta no estándar: /opt/oracle/product/26ai/dbhomeFree/dbs/academia01.dbf -> /opt/oracle/oradata/dbconfig/FREE/dbs/academia01.dbf
+DENTRO del volumen, pero en carpeta no estándar: /opt/oracle/product/26ai/dbhomeFree/dbs/clinica01.dbf -> /opt/oracle/oradata/dbconfig/FREE/dbs/clinica01.dbf
+DENTRO del volumen, pero en carpeta no estándar: /opt/oracle/product/26ai/dbhomeFree/dbs/retail01.dbf -> /opt/oracle/oradata/dbconfig/FREE/dbs/retail01.dbf
+DENTRO del volumen, pero en carpeta no estándar: /opt/oracle/product/26ai/dbhomeFree/dbs/logistica01.dbf -> /opt/oracle/oradata/dbconfig/FREE/dbs/logistica01.dbf
+DENTRO del volumen, pero en carpeta no estándar: /opt/oracle/product/26ai/dbhomeFree/dbs/fintech01.dbf -> /opt/oracle/oradata/dbconfig/FREE/dbs/fintech01.dbf
+-- Contenido de $ORACLE_HOME/dbs --
+lrwxrwxrwx 1 oracle oinstall 37 Jul  5 22:02 /opt/oracle/product/26ai/dbhomeFree/dbs -> /opt/oracle/oradata/dbconfig/FREE/dbs

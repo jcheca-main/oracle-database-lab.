@@ -1,0 +1,153 @@
+
+===== 1. Los tablespaces de la PDB: tipo, gestión de extensiones y de espacio en segmentos =====
+
+TABLESPACE_NAM CONTENTS 	     BIG EXTENTS    ASIGNACIO SSM    BLOCK_SIZE
+-------------- --------------------- --- ---------- --------- ------ ----------
+SYSAUX	       PERMANENT	     YES LOCAL	    SYSTEM    AUTO	   8192
+SYSTEM	       PERMANENT	     YES LOCAL	    SYSTEM    MANUAL	   8192
+TBS_ACADEMIA   PERMANENT	     YES LOCAL	    SYSTEM    AUTO	   8192
+TBS_CLINICA    PERMANENT	     YES LOCAL	    SYSTEM    AUTO	   8192
+TBS_FINTECH    PERMANENT	     YES LOCAL	    SYSTEM    AUTO	   8192
+TBS_LOGISTICA  PERMANENT	     YES LOCAL	    SYSTEM    AUTO	   8192
+TBS_RETAIL     PERMANENT	     YES LOCAL	    SYSTEM    AUTO	   8192
+TEMP	       TEMPORARY	     NO  LOCAL	    UNIFORM   MANUAL	   8192
+UNDOTBS1       UNDO		     YES LOCAL	    SYSTEM    MANUAL	   8192
+USERS	       PERMANENT	     YES LOCAL	    SYSTEM    AUTO	   8192
+
+===== 2. Segmentos de ADMIN_ACADEMIA (tablas, índices, LOB...) =====
+
+SEGMENT_NAME		   SEGMENT_TY TABLESPACE_NAM	EXTENTS     BLOCKS	   KB
+-------------------------- ---------- -------------- ---------- ---------- ----------
+ACA_MATRICULAS		   TABLE      TBS_ACADEMIA	     18        384	 3072
+UQ_ACA_MATRICULA_UNICA	   INDEX      TBS_ACADEMIA	     18        384	 3072
+IDX_ACA_MAT_EST 	   INDEX      TBS_ACADEMIA	     17        256	 2048
+ACA_ESTUDIANTES 	   TABLE      TBS_ACADEMIA	     17        256	 2048
+UQ_ACA_EMAIL		   INDEX      TBS_ACADEMIA	     17        256	 2048
+IDX_ACA_MAT_ASI 	   INDEX      TBS_ACADEMIA	     17        256	 2048
+SYS_C008673		   INDEX      TBS_ACADEMIA	     17        256	 2048
+UQ_ACA_DNI		   INDEX      TBS_ACADEMIA	      9 	72	  576
+SYS_C008659		   INDEX      TBS_ACADEMIA	      7 	56	  448
+SYS_C008666		   INDEX      TBS_ACADEMIA	      1 	 8	   64
+ACA_ASIGNATURAS 	   TABLE      TBS_ACADEMIA	      1 	 8	   64
+UQ_ACA_CODIGO		   INDEX      TBS_ACADEMIA	      1 	 8	   64
+
+===== 3. Extensiones de ACA_ESTUDIANTES (AUTOALLOCATE: 64 KB, después 1 MB...) =====
+
+ EXTENT_ID    FILE_ID	BLOCK_ID     BLOCKS	    KB
+---------- ---------- ---------- ---------- ----------
+	 0	   16	     776	  8	    64
+	 1	   16	     808	  8	    64
+	 2	   16	     824	  8	    64
+	 3	   16	     856	  8	    64
+	 4	   16	     872	  8	    64
+	 5	   16	     880	  8	    64
+	 6	   16	     896	  8	    64
+	 7	   16	     920	  8	    64
+	 8	   16	     936	  8	    64
+	 9	   16	     944	  8	    64
+	10	   16	     976	  8	    64
+	11	   16	     992	  8	    64
+	12	   16	    1008	  8	    64
+	13	   16	    1016	  8	    64
+	14	   16	    1032	  8	    64
+	15	   16	    1064	  8	    64
+	16	   16	    1152	128	  1024
+
+===== 4. La fila 101: su ROWID y su dirección física (DBMS_ROWID) =====
+(TBS_ACADEMIA es BIGFILE -predeterminado desde 23ai-: un solo archivo, relative_fno 1024
+por eso el bloque se decodifica con 'BIGFILE' y el archivo con ROWID_TO_ABSOLUTE_FNO)
+
+ESTUDIANTE_ID ESTADO		   ROWID_FILA	      DATA_OBJECT_ID	ARCHIVO     BLOQUE FILA_EN_BLOQUE
+------------- -------------------- ------------------ -------------- ---------- ---------- --------------
+	  101 ACTIVO		   AAAR2mAAAAAAAMNAAF	       73126	     16        781		5
+-- ¿Qué archivo del disco es ese número? ¿Y qué objeto es ese data_object_id?
+
+   FILE_ID RELATIVE_FNO FILE_NAME
+---------- ------------ --------------------------------------------------
+	16	   1024 /opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf
+
+OWNER		 OBJECT_NAME	  OBJECT_TYPE		  DATA_OBJECT_ID
+---------------- ---------------- ----------------------- --------------
+ADMIN_ACADEMIA	 ACA_ESTUDIANTES  TABLE 			   73126
+
+===== 5. Anatomía de la FILA 101 byte a byte: DUMP() muestra cómo guarda Oracle cada valor =====
+(Typ=2 NUMBER en formato interno de base 100 · Typ=1 VARCHAR2 en ASCII · Typ=180 TIMESTAMP · Len = bytes)
+
+COLUMNA 	     BYTES_INTERNOS
+-------------------- ----------------------------------------------------------------
+ESTUDIANTE_ID	     Typ=2 Len=3: c2,2,2
+DNI		     Typ=1 Len=9: 30,30,30,30,30,31,30,31,58
+NOMBRES 	     Typ=1 Len=9: 4e,6f,6d,62,72,65,31,30,31
+ESTADO		     Typ=1 Len=6: 41,43,54,49,56,4f
+FECHA_REGISTRO	     Typ=180 Len=11: 78,7e,a,18,c,12,18,31,4d,3b,28
+-- Tamaño de la fila: suma de VSIZE de sus columnas frente a AVG_ROW_LEN de las estadísticas
+
+BYTES_DE_DATOS_FILA_101 AVG_ROW_LEN
+----------------------- -----------
+		     68 	 76
+
+===== 6. ¿Cómo de llenos están los bloques de la tabla? (DBMS_SPACE.SPACE_USAGE, tablespaces ASSM) =====
+llenos (FULL)			227  #########################################################
+0-25 % libre (FS1)		  3  #
+25-50 % libre (FS2)		  1  #
+50-75 % libre (FS3)		  0
+75-100 % libre (FS4)		 13  ####
+sin formatear (bajo la HWM)	  0
+
+===== 7. Volcado REAL del bloque 781 del archivo 16 (ALTER SYSTEM DUMP DATAFILE ... BLOCK ...) =====
+
+
+
+Traza: FREE_ora_5226_lab4_bloque.trc (12-bloque.sh la copia completa a la evidencia)
+
+--- [A] CABECERA DEL BLOQUE Y LISTA DE TRANSACCIONES (ITL) ---
+Block header dump:  0x0000030d
+
+ Object id on Block? Y
+ seg/obj: 0x11da6  csc:  0x00000000003fea11  itc: 2  flg: E-  typ: 1 - DATA
+     brn: 0  bdba: 0x308 ver: 0x01 opc: 0
+     inc: 0  exflg: 0
+
+
+ Itl	       Xid		    Uba 	Flag  Lck	 Scn/Fsc
+0x01   0x000a.013.00000238  0x0000030b.00d1.03	--U-   90  fsc 0x0000.003fef94
+0x02   0x0000.000.00000000  0x00000000.0000.00	----	0  fsc 0x0000.00000000
+bdba: 0x0000030d type: 0x06 SAGE: 0
+
+--- [B] CABECERA DE DATOS Y DIRECTORIO DE FILAS (slot array) ---
+data_block_dump,data header at 0xc5c7e064
+
+===============
+tsiz: 0x1f98
+hsiz: 0xc6
+pbl: 0xc5c7e064
+     76543210
+flag=--------
+
+ntab=1
+nrow=90
+frre=-1
+fsbo=0xc6
+fseo=0x427
+avsp=0x361
+tosp=0x361
+0xe:pti[0]	nrow=90	offs=0
+0x12:pri[0]	offs=0x1b63
+0x14:pri[1]	offs=0x1bad
+0x16:pri[2]	offs=0x1bf7
+0x18:pri[3]	offs=0x1c41
+0x1a:pri[4]	offs=0x1c8b
+0x1c:pri[5]	offs=0x1cda
+0x1e:pri[6]	offs=0x1d28
+
+--- [C] LA FILA 5 (estudiante 101), columna a columna ---
+tab 0, row 5, @0x1cda
+
+tl: 78 fb: --H-FL-- lb: 0x1  cc: 7
+col  0: [ 3]  c2 02 02
+col  1: [ 9]  30 30 30 30 30 31 30 31 58
+col  2: [ 9]  4e 6f 6d 62 72 65 31 30 31
+col  3: [11]  41 70 65 6c 6c 69 64 6f 31 30 31
+col  4: [19]  65 73 74 31 30 31 40 61 6c 75 2e 75 63 61 6d 2e 65 64 75
+col  5: [ 6]  41 43 54 49 56 4f
+col  6: [11]  78 7e 0a 18 0c 12 18 31 4d 3b 28

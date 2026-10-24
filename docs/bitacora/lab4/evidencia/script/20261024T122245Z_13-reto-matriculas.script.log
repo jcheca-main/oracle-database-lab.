@@ -1,0 +1,25 @@
+===== RETO L - ACA_MATRICULAS: predicción vs realidad =====
+Predicción (hecha antes de mirar, a partir del DDL): R ≈ 35 bytes/fila
+  bfr (Unidad 3) = floor((8192-96)*0.9/35) = floor(7286.4/35) = 208 filas/bloque
+  b = ceil(60000/208) = 289 bloques (~2,3 MB)
+  bfr (Oracle)   = floor((8192-122)*0.9/(35+2)) = floor(7263/37) = 196 filas/bloque
+  b = ceil(60000/196) = 307 bloques (~2,4 MB)
+
+----- Ahora, lo que dicen las estadísticas y el segmento -----
+
+Session altered.
+
+
+	 R    R_BYTES BLOQUES_HWM   PCT_FREE BLOQUES_ASIGNADOS	       MB
+---------- ---------- ----------- ---------- ----------------- ----------
+     60000	   30	      370	  10		   384		3
+-- bfr MEDIDO: filas reales por bloque
+
+BLOQUES_CON_FILAS  MIN_FILAS	  MEDIA  MAX_FILAS
+----------------- ---------- ---------- ----------
+	      301	 159	  199.3        213
+-- Coste de un recorrido completo en HDD (150 MiB/s): ms = bloques x 8192 / 157286,4
+
+    BLOCKS   T_HDD_MS
+---------- ----------
+       370	 19.3

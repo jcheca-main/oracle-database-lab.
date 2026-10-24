@@ -1,0 +1,175 @@
+SQL Format Cleared
+
+===== 1. IDENTIDAD: la instancia (procesos + memoria) y la base (archivos) son cosas distintas =====
+
+INSTANCIA HOST_NAME      VERSION      ARRANQUE          DIAS_ARRIBA STATUS       DATABASE_STATUS  
+--------- -------------- ------------ ----------------- ----------- ------------ -----------------
+FREE      f49e437017b9   23.26.3.0.0  2026-10-24 11:21          .09 OPEN         ACTIVE           
+
+NAME                                 DBID CDB LOG_MODE     OPEN_MODE            FORCE_L FLASHBACK DATABASE_ROLE   
+------------------------------ ---------- --- ------------ -------------------- ------- --------- ----------------
+FREE                           1509902213 YES ARCHIVELOG   READ WRITE           YES     NO        PRIMARY         
+
+    CON_ID CONTENEDOR OPEN_MODE          MB
+---------- ---------- ---------- ----------
+         1 CDB$ROOT   READ WRITE          0
+         2 PDB$SEED   READ ONLY         810
+         3 FREEPDB1   READ WRITE       1462
+
+===== 2. MEMORIA: SGA (compartida) y PGA (privada de cada proceso) =====
+
+NOMBRE                                           MB RES
+---------------------------------------- ---------- ---
+Maximum SGA Size                               1529 No 
+Buffer Cache Size                              1072 Yes
+Shared Pool Size                                416 Yes
+Free SGA Memory Available                        16    
+Large Pool Size                                  16 Yes
+Fixed SGA Size                                    5 No 
+Redo Buffers                                      4 No 
+In-Memory Area Size                               0 No 
+Java Pool Size                                    0 Yes
+
+NOMBRE                                           MB
+---------------------------------------- ----------
+aggregate PGA target parameter                  512
+total PGA allocated                             373
+maximum PGA allocated                           551
+
+===== 3. PROCESOS: segundo plano (background) frente a servidores de sesiones =====
+
+TIPO                     PROCESOS_N
+------------------------ ----------
+servidor / otros                  5
+segundo plano                    85
+
+PROCESOS
+------------------------------------------------------------------------------------------
+ARC0 ARC1 CKPT DBRM DBW0 LGWR LREG MMNL MMON PMON PSP0 RECO SMON VKTM
+
+===== 4. ARCHIVOS: los que SON la base y los que la acompañan =====
+
+TIPO                       ARCHIVOS         MB
+------------------------ ---------- ----------
+archived log (en disco)           4        465
+control file                      2         36
+datafile                         16       4004
+redo log (miembro)                3        600
+tempfile                          3         60
+
+NAME                           VALUE                                                       
+------------------------------ ------------------------------------------------------------
+spfile                         /opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora      
+control_files                  /opt/oracle/oradata/FREE/control01.ctl, /opt/oracle/oradata/
+db_block_size                  8192                                                        
+db_recovery_file_dest                                                                      
+db_recovery_file_dest_size     0                                                           
+diagnostic_dest                /opt/oracle                                                 
+
+===== 5. ALMACENAMIENTO LÓGICO: tablespaces llenos y qué tipo de segmentos hay en cada contenedor =====
+
+    CON_ID TABLESPACE_NAME   MB_USADOS  MB_MAXIMO  PCT_USADO ALERTA     
+---------- ---------------- ---------- ---------- ---------- -----------
+         1 SYSTEM                 1057     959436         .1            
+         1 SYSAUX                  637     959036         .1            
+         1 USERS                     6     958373          0            
+         1 UNDOTBS1                 18   33554432          0            
+         1 TEMP                      0      32768          0            
+         3 TBS_ACADEMIA             23       1024        2.3            
+         3 TBS_CLINICA               6       1024         .6            
+         3 TBS_FINTECH               6       1024         .6            
+         3 TBS_LOGISTICA             6       1024         .6            
+         3 TBS_RETAIL                6       1024         .6            
+         3 SYSAUX                  430     958826          0            
+         3 SYSTEM                  307     958676          0            
+         3 USERS                     9     958438          0            
+         3 UNDOTBS1                 37   33554432          0            
+         3 TEMP                      0      32768          0            
+
+    CON_ID TIPO                      SEGMENTOS         MB
+---------- ------------------------ ---------- ----------
+         1 TABLE                          1839        699
+         1 LOBSEGMENT                      682        288
+         1 INDEX                          2005        257
+         1 TABLE PARTITION                 573         88
+         1 INDEX PARTITION                 556         45
+         1 LOBINDEX                        682         43
+         1 TYPE2 UNDO                       10         17
+         1 ROLLBACK                          1          0
+         3 LOBSEGMENT                      382        198
+         3 INDEX                           847        164
+         3 TABLE                           642        152
+         3 TABLE PARTITION                  90         26
+         3 LOBINDEX                        382         24
+         3 TYPE2 UNDO                       10         17
+         3 INDEX PARTITION                 101         13
+         3 ROLLBACK                          1          0
+
+===== 6. ÍNDICES de los esquemas de negocio: cuántos, cuánto pesan y cuáles tienen mal factor de agrupamiento =====
+
+OWNER               INDICES     UNICOS ALTURA_MAX CF_CERCANO_A_FILAS NO_VALIDOS
+---------------- ---------- ---------- ---------- ------------------ ----------
+ADMIN_ACADEMIA            9          7          2                  2          0
+ADMIN_CLINICA             8          6                             0          0
+ADMIN_FINTECH             6          3                             0          0
+ADMIN_LOGISTICA           6          5                             0          0
+ADMIN_RETAIL              7          4                             0          0
+(ALTURA_MAX vacía = el esquema no tiene estadísticas: el optimizador va a ciegas. Lo arregla DBMS_STATS.GATHER_SCHEMA_STATS)
+
+===== 7. SEGURIDAD: cuentas comunes y locales, y quién tiene el rol DBA =====
+
+    CON_ID COM   USUARIOS DE_LA_CASA
+---------- --- ---------- ----------
+         1 YES         37          1
+         3 NO           9          9
+         3 YES         35          1
+(Ninguna fila = ninguna cuenta de la casa tiene DBA, solo las que mantiene Oracle: así debe ser)
+
+===== 8. RED: los servicios que anuncia el listener =====
+
+    CON_ID NAME                           NETWORK_NAME                      
+---------- ------------------------------ ----------------------------------
+         1 SYS$BACKGROUND                                                   
+         1 SYS$USERS                                                        
+         1 free                           free                              
+         1 freeXDB                        freeXDB                           
+         3 freepdb1                       freepdb1                          
+
+===== 9. CONFIGURACIÓN: parámetros que alguien cambió (no están en su valor por defecto) =====
+
+NAME                           VALUE                                                       
+------------------------------ ------------------------------------------------------------
+_instance_recovery_bloom_filte 1048576                                                     
+r_size                                                                                     
+
+compatible                     23.6.0                                                      
+control_files                  /opt/oracle/oradata/FREE/control01.ctl, /opt/oracle/oradata/
+db_block_size                  8192                                                        
+db_name                        FREE                                                        
+diagnostic_dest                /opt/oracle                                                 
+dispatchers                    (PROTOCOL=TCP) (SERVICE=FREEXDB)                            
+enable_pluggable_database      TRUE                                                        
+fast_start_parallel_rollback   FALSE                                                       
+local_listener                                                                             
+nls_language                   AMERICAN                                                    
+nls_territory                  AMERICA                                                     
+open_cursors                   300                                                         
+pga_aggregate_target           536870912                                                   
+processes                      200                                                         
+remote_login_passwordfile      EXCLUSIVE                                                   
+sga_target                     1610612736                                                  
+undo_tablespace                UNDOTBS1                                                    
+
+===== 10. SALUD: errores ORA- en el alert log de las últimas 24 horas =====
+
+ERRORES_ORA_24H
+---------------
+              7
+
+CODIGO          VECES ULTIMA_VEZ      
+---------- ---------- ----------------
+ORA-00800           4 2026-10-24 11:21
+ORA-00031           1 2026-10-24 11:49
+ORA-65025           1 2026-10-24 11:55
+ORA-959             1 2026-10-24 12:20
+(Cada código se busca en https://docs.oracle.com/error-help/db/ora-NNNNN/ antes de tocar nada)

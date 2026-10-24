@@ -1,0 +1,18 @@
+
+===== 1. La tabla del ejemplo continuo: cuántos bloques ocupa =====
+
+TABLE_NAME	   NUM_ROWS	BLOCKS AVG_ROW_LEN
+---------------- ---------- ---------- -----------
+ACA_ESTUDIANTES       20000	   244		76
+
+===== 2. Vaciar la caché (solo laboratorio) =====
+
+===== 3. Misma consulta dos veces: lecturas lógicas (memoria) y físicas (disco) de ESTA sesión =====
+Ronda 1 (cach?? fr??a)	  filas ACTIVO=17600 | lecturas l??gicas=463 | lecturas f??sicas=256
+Ronda 2 (cach?? caliente) filas ACTIVO=17600 | lecturas l??gicas=247 | lecturas f??sicas=0
+
+===== 4. Los bloques de la tabla que ahora viven en el Buffer Cache (v$bh) =====
+
+OBJECT_NAME	 BLOQUES_EN_CACHE
+---------------- ----------------
+ACA_ESTUDIANTES 	      245
