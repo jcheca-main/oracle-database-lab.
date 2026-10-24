@@ -1,0 +1,72 @@
+== 1. Comprobaciones previas ==
+Volumen: 4995 MB · libre en backups/: 974211 MB
+== 2. Inventario de archivos (base abierta) ==
+META|version|23.26.3.0.0
+META|base|FREE|log_mode=ARCHIVELOG|scn=4182016
+FILE|datafile|/opt/oracle/oradata/FREE/system01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/pdbseed/system01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/sysaux01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/pdbseed/sysaux01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/users01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/pdbseed/undotbs01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/undotbs01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/FREEPDB1/system01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/FREEPDB1/sysaux01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/FREEPDB1/undotbs01.dbf
+FILE|datafile|/opt/oracle/oradata/FREE/FREEPDB1/users01.dbf
+FILE|datafile|/opt/oracle/product/26ai/dbhomeFree/dbs/academia01.dbf
+FILE|datafile|/opt/oracle/product/26ai/dbhomeFree/dbs/clinica01.dbf
+FILE|datafile|/opt/oracle/product/26ai/dbhomeFree/dbs/retail01.dbf
+FILE|datafile|/opt/oracle/product/26ai/dbhomeFree/dbs/logistica01.dbf
+FILE|datafile|/opt/oracle/product/26ai/dbhomeFree/dbs/fintech01.dbf
+FILE|tempfile|/opt/oracle/oradata/FREE/temp01.dbf
+FILE|tempfile|/opt/oracle/oradata/FREE/pdbseed/temp01.dbf
+FILE|tempfile|/opt/oracle/oradata/FREE/FREEPDB1/temp01.dbf
+FILE|redo|/opt/oracle/oradata/FREE/redo03.log
+FILE|redo|/opt/oracle/oradata/FREE/redo02.log
+FILE|redo|/opt/oracle/oradata/FREE/redo01.log
+FILE|control|/opt/oracle/oradata/FREE/control01.ctl
+FILE|control|/opt/oracle/oradata/FREE/control02.ctl
+FILE|spfile|/opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora
+FILE|pwfile|/opt/oracle/product/26ai/dbhomeFree/dbs/orapwFREE
+== 3. Cobertura: ¿está todo dentro de /opt/oracle/oradata (el volumen)? ==
+  dentro  /opt/oracle/oradata/FREE/FREEPDB1/sysaux01.dbf
+  dentro  /opt/oracle/oradata/FREE/FREEPDB1/system01.dbf
+  dentro  /opt/oracle/oradata/FREE/FREEPDB1/temp01.dbf
+  dentro  /opt/oracle/oradata/FREE/FREEPDB1/undotbs01.dbf
+  dentro  /opt/oracle/oradata/FREE/FREEPDB1/users01.dbf
+  dentro  /opt/oracle/oradata/FREE/control01.ctl
+  dentro  /opt/oracle/oradata/FREE/control02.ctl
+  dentro  /opt/oracle/oradata/FREE/pdbseed/sysaux01.dbf
+  dentro  /opt/oracle/oradata/FREE/pdbseed/system01.dbf
+  dentro  /opt/oracle/oradata/FREE/pdbseed/temp01.dbf
+  dentro  /opt/oracle/oradata/FREE/pdbseed/undotbs01.dbf
+  dentro  /opt/oracle/oradata/FREE/redo01.log
+  dentro  /opt/oracle/oradata/FREE/redo02.log
+  dentro  /opt/oracle/oradata/FREE/redo03.log
+  dentro  /opt/oracle/oradata/FREE/sysaux01.dbf
+  dentro  /opt/oracle/oradata/FREE/system01.dbf
+  dentro  /opt/oracle/oradata/FREE/temp01.dbf
+  dentro  /opt/oracle/oradata/FREE/undotbs01.dbf
+  dentro  /opt/oracle/oradata/FREE/users01.dbf
+  dentro  /opt/oracle/product/26ai/dbhomeFree/dbs/academia01.dbf
+  dentro  /opt/oracle/product/26ai/dbhomeFree/dbs/clinica01.dbf
+  dentro  /opt/oracle/product/26ai/dbhomeFree/dbs/fintech01.dbf
+  dentro  /opt/oracle/product/26ai/dbhomeFree/dbs/logistica01.dbf
+  dentro  /opt/oracle/product/26ai/dbhomeFree/dbs/orapwFREE
+  dentro  /opt/oracle/product/26ai/dbhomeFree/dbs/retail01.dbf
+  dentro  /opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora
+== 4. Parada limpia: SHUTDOWN IMMEDIATE y docker stop ==
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+== 5. Copia del volumen (tar + gzip, conservando dueños y permisos) ==
+== 6. Archivos fuera del volumen ==
+  ninguno: el volumen contiene toda la base de datos
+== 7. Manifiesto y sumas SHA-256 ==
+== 8. Arranque y espera a healthy ==
+  t=0s  docker=starting  cdb/pdb=no-disponible
+  t=10s  docker=healthy  cdb/pdb=READWRITE/READWRITE
+== Copia terminada ==
+551M	/home/capit/oracle-database-lab./backups/20261024T110346Z_lab3-final
+Para restaurarla: bash scripts/ops/restaurar-estado.sh /home/capit/oracle-database-lab./backups/20261024T110346Z_lab3-final
