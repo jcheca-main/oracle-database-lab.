@@ -30,3 +30,14 @@ Orden de corrección: primero lo irreversible sobre seguridad (2 y 1: las creden
 - C incorrecta: `IMMEDIATE` deshace las transacciones en curso (rollback) antes de cerrar; las transacciones "perdidas" nunca se confirmaron, la copia es consistente.
 - D correcta: restaurada, `STARTUP` la monta y abre sin pasos extra.
 - E incorrecta: RMAN es una herramienta, no un requisito; los archivos se pueden copiar con el SO.
+
+## Parte B - La cuenta de observabilidad C##OPS_RO
+
+### Reto - Mínimo privilegio, de verdad
+
+Dos riesgos concretos de darle el rol DBA "para que no le falte nada":
+
+1. **Pierde la garantía de solo lectura.** El rol DBA trae escritura y administración (`DROP`, `ALTER SYSTEM`, `ALTER TABLESPACE`, `TRUNCATE`): un despiste en la ventana equivocada de la herramienta de monitorización deja de ser un "no puedo" imposible y se convierte en una incidencia de producción. La separación de tareas (quien mira no toca) desaparece.
+2. **Superficie de ataque enorme si la cuenta se filtra.** DBA incluye crear usuarios y conceder privilegios (`CREATE USER`, `GRANT`): con la contraseña de una cuenta de monitorización, un atacante obtendría control de la base completa en todos los contenedores, no lectura. Y auditoría: una cuenta de observación con DBA no es defendible ante un revisor, porque ya no demuestra mínimo privilegio.
+
+Privilege exacto para leer el alert log (Parte J, `11-ampliar-ops-ro.sql`): `GRANT SELECT ON sys.v_$diag_alert_ext TO c##ops_ro CONTAINER = ALL;`. Conviene saber que `SELECT_CATALOG_ROLE` **no** incluye esa vista: se concede el objeto concreto y nada más (least privilege de verdad).

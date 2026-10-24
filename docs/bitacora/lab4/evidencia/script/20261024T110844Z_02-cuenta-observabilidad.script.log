@@ -1,0 +1,21 @@
+
+PL/SQL procedure successfully completed.
+
+
+Grant succeeded.
+
+
+Grant succeeded.
+
+
+User altered.
+
+== Verificación: la cuenta existe en todos los contenedores ==
+
+    CON_ID CONTENEDOR	USERNAME     COM ACCOUNT_STATUS
+---------- ------------ ------------ --- --------------------------------
+	 1 CDB$ROOT	C##OPS_RO    YES OPEN
+	 3 FREEPDB1	C##OPS_RO    YES OPEN
+
+2 rows selected.
+
