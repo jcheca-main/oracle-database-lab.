@@ -446,3 +446,62 @@ Lectura: caben 5 filas menos porque la fila 19500 es **6 bytes más larga** (nom
 **P19: respuestas A y B.** PCTFREE 10 = "dejo de insertar cuando queda menos del 10 % libre" (A) y ese espacio está reservado para que las filas existentes crezcan con `UPDATE` (B). C falsa (el espacio de la ITL lo fija `INITRANS`, no PCTFREE), D falsa (también afecta a índices... en realidad se aplica a tablas e índices de heap; en todo caso PCTFREE no es exclusivo de nada), E falsa (con PCTFREE 10 una fila que crezca demasiado igual migra: `--H-FL--` deja de serlo).
 
 Evidencias: `12-bloque.script.log`, `12-reto-bloque.script.log`, `12-volcado-bloque.trc.txt` y `12-reto-volcado-bloque.trc.txt`.
+
+## Parte L · Factor de bloqueo, coste y capacidad de crecimiento
+
+**¿Qué hice y por qué?**
+
+Antes de crear una tabla de 50 millones de filas, alguien tiene que decir cuánto disco necesita y cuánto tardará leerla. Con `13-capacidad.sql` calculé —y medí— el factor de bloqueo de **ACA_ESTUDIANTES**, el número de páginas, el coste real de una lectura lógica / física aleatoria / secuencial, y comparé la predicción de las fórmulas de la Unidad 3 con la realidad. El guion avisa de algo importante: en este contenedor la "lectura física" la sirve muchas veces la caché de páginas de Linux, no el disco, y lo comprobé.
+
+El script hace seis cosas: (1) recoge estadísticas de ACA_ESTUDIANTES; (2) **mide** el factor de bloqueo contando filas reales por bloque con `DBMS_ROWID`; (3) **calcula** el factor con las fórmulas de la Unidad 3 (versión genérica y versión Oracle); (4) crea un banco de medida propio (`TBS_LAB4` / `LAB4_PRUEBAS`, 400 000 filas); (5) mide el coste de los tres tipos de lectura con `FLUSH BUFFER_CACHE` y un cronómetro en microsegundos; (6) mira las esperas de toda la instancia en `v$system_event`.
+
+**Respuestas con mis números:**
+
+**1. El factor de bloqueo medido de ACA_ESTUDIANTES es 86,6 filas por bloque; la fórmula predijo 95 (Unidad 3) y 93 (Oracle), y el segmento acabó con 244 bloques bajo la HWM.**
+`13-capacidad.script.log` (secciones 1-3): 20 000 filas de 76 bytes. Contando de verdad hay **231 bloques con filas**, con una media de **86,6** filas/bloque (mínimo 68, máximo 95). La fórmula da `floor((8192-96)·0.9/76) = 95` → `b = ceil(20000/95) = 211` bloques; la versión Oracle (cabecera de 122 bytes y +2 por la entrada del directorio de filas) da 93 → 216 bloques. Pero las estadísticas reportan **244 bloques bajo la HWM** y **256 asignados**.
+
+**2. La fórmula se queda corta porque es un modelo: acierta el orden de magnitud, no el número exacto.**
+La diferencia 211/216 → 244 viene de dos cosas que la fórmula ignora: (a) las filas reales no todas miden 76 bytes — varían entre 68 y 95 por bloque; y (b) el segmento tiene **bloques casi vacíos al final** (13, según el análisis de la Parte K) que la HWM incluye pero que no caben en el cálculo teórico. El error típico, como señala el guion, es usar el tamaño declarado de la columna en lugar del medio real.
+
+**3. El coste medido de las tres lecturas: 1,88 µs por lectura lógica, 17,7 µs por lectura física aleatoria y 1604 MB/s en secuencial.**
+`13-capacidad.script.log` (sección 5): sobre `LAB4_PRUEBAS.LECTURAS` (400 000 filas, **4676 bloques**, 36,5 MB):
+- **Lógica**: 400 000 lecturas (4 por búsqueda: raíz, rama, hoja, tabla) en 750 ms de CPU → **1,88 µs** por lectura.
+- **Física aleatoria**: con la caché vacía, 5464 lecturas de un bloque en 96,5 ms → **lat = 17,7 µs** por lectura.
+- **Secuencial**: recorrido completo, 4595 bloques en 53 peticiones (~87 bloques/petición) en 22 ms → **Bw = 1604 MB/s**.
+
+**4. Ojo: esas lecturas "físicas" son rápidas porque las sirve la caché de Linux, no el disco.**
+El propio script lo advierte y se cumple: `FLUSH BUFFER_CACHE` vacía la caché de Oracle, **no** la caché de páginas del sistema operativo. Por eso la latencia sale en microsegundos y el cociente `c_sec/c_aleat` es 0,275 (casi 1). En un HDD de verdad (latencia 5 ms) leer los mismos 4595 bloques de forma aleatoria costaría **23 s**; en SSD (0,1 ms), 460 ms. El método de medición es el mismo; cambia el hardware y cambia la decisión.
+
+**5. El umbral de rentabilidad del índice es bajísimo: 0,32 %.**
+`13-capacidad.script.log` (5d): `Umbral k/r < (1/bfr)·cociente = (1/86)·0,275 = 0,32 %`. Es decir, si una consulta toca más del 0,32 % de las filas, en *este* entorno el recorrido completo ya gana. Con un HDD real el umbral baja a ~0,01 %: casi cualquier consulta que toque más de unas pocas filas conviene hacerla por recorrido completo si no hay buen índice.
+
+**Resumen de la parte:**
+
+| Métrica | Valor |
+|---|---|
+| Factor de bloqueo medido (ACA_ESTUDIANTES) | 86,6 filas/bloque |
+| Fórmula U3 / Oracle | 95 / 93 filas/bloque |
+| Bloques predichos (U3 / Oracle) | 211 / 216 |
+| Bloques reales (bajo HWM / asignados) | 244 / 256 |
+| LECTURAS: filas / bloques | 400 000 / 4676 |
+| Lectura lógica | 1,88 µs |
+| Lectura física aleatoria | 17,7 µs |
+| Lectura secuencial | 1604 MB/s |
+| Umbral de rentabilidad del índice | 0,32 % |
+| Barrido aleatorio en HDD (23 s) vs secuencial | aleatorio caro, secuencial barato |
+
+**Reto · Dimensionar ACA_MATRICULAS (60 000 filas):**
+
+Antes de mirar, predije con la fórmula de la Unidad 3 suponiendo R ≈ 35 bytes/fila (estimado del DDL): `bfr = floor((8192-96)·0.9/35) = 208` → **289 bloques**; versión Oracle 196 → 307 bloques (`13-reto-matriculas.script.log`). Después, con las estadísticas reales (`DBA_TABLES` / `DBA_SEGMENTS`): **AVG_ROW_LEN = 30** (más pequeñas de lo que estimé), **60 000 filas**, pero **BLOCKS (HWM) = 370** y 384 asignados. El bfr **medido** es 199,3 filas/bloque en 301 bloques que tienen filas.
+
+La diferencia con L.2 (donde la fórmula se quedó corta porque las filas reales eran *más grandes* que la media declarada) aquí es al revés en el dato de entrada pero no en el resultado: mis filas son más pequeñas (30 < 35), así que caben más por bloque de lo predicho, pero el segmento reserva espacio por extensiones y arrastra huecos, y la HWM se queda en 370: **69 bloques bajo la marca que no contienen filas**. Es el mismo fenómeno de los 13 bloques casi vacíos de ACA_ESTUDIANTES, en mayor medida.
+
+El recorrido completo en un **HDD a 150 MB/s** cuesta `370 × 8192 / 157286,4 = 19,3 ms` (`13-reto-matriculas.script.log`): es barato porque es **secuencial**, va limitado por ancho de banda y no por latencia. Un HDD lee una ráfaga de bloques contiguos a ~150 MB/s; lo caro es el acceso aleatorio uno a uno (5 ms cada uno), no el barrido.
+
+**Pregunta 20: tabla con r = 2 000 000 filas de R = 180 bytes, bloques de 8192 con 96 de cabecera y PCTFREE 10. ¿Cuántos bloques necesita según la Unidad 3?**
+
+**B. 50 000.** `bfr = floor((8192-96)·(1-0.10)/180) = floor(7286.4/180) = floor(40,48) = 40` filas/bloque; `b = ceil(2 000 000/40) = 50 000` bloques.
+
+**Pregunta 21: una sesión hace un recorrido completo y el evento dominante es "db file scattered read". ¿Qué indica?**
+
+**B. Lecturas multibloque a la caché de buffers.** `db file scattered read` es el recorrido completo trae varios bloques de golpe (multibloque) a la caché; `db file sequential read` es el de un solo bloque (típico de índice) y `direct path read` es el multibloque directo a la PGA que se salta la caché.

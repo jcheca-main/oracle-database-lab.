@@ -1,0 +1,48 @@
+
+===== 1. ACA_ESTUDIANTES: lo que dicen las estadísticas (r filas, R bytes por fila, b bloques) =====
+
+         R    R_BYTES BLOQUES_BAJO_HWM   PCT_FREE  INI_TRANS BLOQUES_ASIGNADOS    B_BYTES
+---------- ---------- ---------------- ---------- ---------- ----------------- ----------
+     20000         76              244         10          1               256       8192
+
+===== 2. Factor de bloqueo MEDIDO: filas por bloque, contando de verdad =====
+
+BLOQUES_CON_FILAS  MIN_FILAS MEDIA_FILAS  MAX_FILAS
+----------------- ---------- ----------- ----------
+              231         68        86.6         95
+
+===== 3. Factor de bloqueo CALCULADO y número de páginas (fórmulas de la Unidad 3, 3.1.7) =====
+bfr (Unidad 3)  = floor((8192-96)*(1-10%)/76)        = 95 filas/bloque -> b = ceil(20000/95) = 211 bloques
+bfr (Oracle)    = floor((8192-122)*(1-10%)/(76+2))   = 93 filas/bloque -> b = ceil(20000/93) = 216 bloques
+b real (estad??sticas, bajo la HWM)                           = 244 bloques
+
+===== 4. Banco de medida: tablespace y esquema de pruebas del Lab 4 (dentro del volumen) =====
+
+         R    R_BYTES          B         MB
+---------- ---------- ---------- ----------
+    400000         78       4676       36.5
+
+===== 5. Coste MEDIDO de una lectura lógica, una física aleatoria y una lectura secuencial =====
+5a. L??GICA    : 400000 lecturas l??gicas (4 por b??squeda) en 750 ms de CPU -> 1.88 ??s por lectura l??gica
+5b. ALEATORIA : 5464 lecturas f??sicas de 1 bloque (??ndice + tabla) en 96.5 ms -> lat = 17.7 ??s por lectura f??sica
+5c. SECUENCIAL: 4595 bloques en 53 peticiones (36 multibloque, ~87 bloques/petici??n) en 22 ms -> Bw = 1604 MB/s
+
+5d. PREDICCI??N frente a MEDIDA (Unidad 3, 3.1.8), con b = 4595 bloques:
+    T_secuencial medido               = 22.4 ms
+    T_aleatorio  = b x lat            = 4595 x 17.7 ??s = 81.3 ms (3.6 veces el secuencial)
+    Con un disco HDD (lat ~ 5 ms)     = 23 s;  con SSD (lat ~ 0,1 ms) = 460 ms
+    c_sec / c_aleat por bloque        = .275
+    Umbral k/r < (1/bfr) x cociente   = (1/86) x .275 = .32 % de las filas: por encima, el recorrido completo gana
+(OJO: en este contenedor la "lectura física" de Oracle la sirve muchas veces la caché de páginas de Linux, no el disco:
+FLUSH BUFFER_CACHE vacía la caché de Oracle, no la del sistema operativo. Por eso lat sale en microsegundos.
+En producción con almacenamiento real se mide igual y sale del orden de 0,1-10 ms: el método es el que importa.)
+
+===== 6. Las mismas latencias vistas por toda la instancia desde el arranque (v$system_event) =====
+
+EVENT                             ESPERAS US_POR_ESPERA
+------------------------------ ---------- -------------
+db file scattered read               1437           137
+db file sequential read              8254            78
+direct path read                       25           188
+('db file sequential read' = lectura física de UN bloque; 'scattered' = multibloque a la caché
+'direct path read' = multibloque a la PGA, saltándose la caché: el "bypass" de la Unidad 3, 3.1.8)
