@@ -561,3 +561,54 @@ nrid:  0x00001623.25a
 **Pregunta 23: una fila mide 12 000 bytes y el tablespace usa bloques de 8 KB. ¿Qué es cierto?**
 
 **B. La fila está encadenada y `MOVE` no lo arregla.** La fila no cabe en ningún bloque de 8 KB, así que se reparte en varias piezas; reorganizar la tabla no la reunirá jamás. Hace falta un tablespace con bloques mayores o rediseñar la tabla.
+
+## Parte N · Autopsia de la instancia y verificación final
+
+**¿Qué hice y por qué?**
+
+Una autopsia es una revisión completa, ordenada y sin prisa que termina en un informe: se hace al heredar una base, antes de una migración o como auditoría anual. `15-autopsia-instancia.sql` reúne en una página todo lo aprendido en el laboratorio —identidad, memoria, procesos, archivos, almacenamiento, índices, seguridad, red, configuración y salud—. Lo importante es que **el script es de solo lectura y lo ejecuta `C##OPS_RO`** (no SYS): se puede lanzar en producción en cualquier momento sin miedo. Lo corrí con `bash scripts/ops/ro.sh scripts/lab4/15-autopsia-instancia.sql`.
+
+Después hice dos cosas: (1) el **reto**, escribir mi propio informe `docs/bitacora/lab4-autopsia.md` con mis hallazgos (no copiar el del guion: mi base es distinta); y (2) la **verificación final** con `16-verificacion-final.sh`, que comprueba automáticamente que todo el lab quedó bien y devuelve un código de salida igual al número de fallos (para poder usarlo en CI).
+
+**Respuestas con mis números (mi base difiere de la del guion):**
+
+**1. Mi base está en ARCHIVELOG, pero sin FRA: el hallazgo de más riesgo.**
+La autopsia (`15-autopsia-instancia.spool.log`, secciones 1 y 4) muestra `LOG_MODE = ARCHIVELOG` y `FORCE_L = YES` (mi imagen difiere de la del guion, que venía en NOARCHIVELOG). Hay ARC0-ARC3 y **4 archived logs de 465 MB** en disco. Pero `db_recovery_file_dest` está **vacío** y `db_recovery_file_dest_size = 0`: **no hay FRA**. Los archived logs van directamente a disco sin límite ni retención gestionada → si el disco se llena, la instancia se para. Acción (Lab 5): configurar FRA y política de retención.
+
+**2. Punto único de fallo en los archivos críticos.**
+`control_files` apunta a `/opt/oracle/oradata/FREE/` con **2 control files** en la misma carpeta, y los **3 miembros de redo** viven ahí también. La pérdida de esa carpeta/volumen deja la base sin control ni redo: no arranca. Acción (Lab 5): multiplexar control files y redo en rutas distintas.
+
+**3. El ADR queda fuera del volumen persistente** (confirmación del hallazgo de la Parte J).
+`diagnostic_dest = /opt/oracle`, y el alert log y los traces viven en `/opt/oracle/diag/...`, que no persiste al recrear el contenedor: se pierde la historia de diagnóstico.
+
+**4. Cuatro esquemas de negocio van a ciegas: no tienen estadísticas.**
+Sección 6: `ADMIN_CLINICA`, `ADMIN_FINTECH`, `ADMIN_LOGISTICA` y `ADMIN_RETAIL` tienen `ALTURA_MAX` **vacía** (sin estadísticas); solo `ADMIN_ACADEMIA` las tiene (altura 2). Además, `ADMIN_ACADEMIA` tiene **2 índices con factor de agrupamiento cercano a las filas** (caros para rangos). Acción: `DBMS_STATS.GATHER_SCHEMA_STATS` en cada esquema.
+
+**5. `common_user_prefix` está en su defecto (C##), no vacío.**
+A diferencia del guion (donde estaba vacío y salía en el listado de parámetros cambiados), en mi imagen **no aparece** en la sección 9, lo que significa que vale `C##` (su defecto) y los usuarios comunes respetan el prefijo. No es un problema; solo algo que saber.
+
+**6. Los 7 ORA- de las últimas 24 h son ruido, no incidentes.**
+Sección 10: `ORA-00800` ×4, `ORA-00031`, `ORA-65025` y `ORA-959`. Miré el texto real de cada uno antes de concluir: `ORA-00800` es "soft external error" de los procesos `vktm`/`lgwr` (ruido conocido del contenedor de arranque); `ORA-00031` es el `KILL SESSION` que provocamos en la Parte H; `ORA-65025` es el `DROP PLUGGABLE DATABASE pdb_lab4` de la Parte I; `ORA-959` es el `DROP TABLESPACE tbs_lab4` de la Parte M. **Ninguno es un error real de la base.** `ORA-06512` no aparece aquí, pero recuerdo la lección del guion: no es un error, es una línea de pila que acompaña al error real.
+
+**7. Lo que está sano** (para no quedarme solo con los problemas): ningún tablespace cerca del 85 % (el más lleno es `TBS_ACADEMIA` al **2,3 %**), ningún índice inválido (`no_validos = 0` en los cinco esquemas), ninguna cuenta de la casa con DBA (mínimo privilegio correcto), y `FORCE_LOGGING` activo.
+
+El informe completo, con la tabla de hallazgos (sección, evidencia, riesgo, acción, prioridad) y el **resumen de tres líneas para un jefe no técnico**, está en `docs/bitacora/lab4-autopsia.md`.
+
+**8. La verificación final dio TODO OK (código de salida 0).**
+`16-verificacion-final.script.log`: las 6 comprobaciones de correcciones del Lab 3, las 5 de instancia/parámetros, las 6 de contenedores/archivos/bloque/capacidad, las 16 de evidencias (00-15) y las 3 de higiene (PFILE versionado, `config/.env` fuera de Git, `backups/` fuera de Git) — **todas en OK**. Confirmó además que no queda basura: `PDB_LAB4` borrada, usuarios `*LAB4*` borrados y `TBS_LAB4` borrado. El script es una prueba de aceptación: su código de salida es el número de fallos, así que sirve directamente en un pipeline de CI.
+
+**Resumen de la parte:**
+
+| Hallazgo | Riesgo | Prioridad |
+|---|---|---|
+| ARCHIVELOG sin FRA (4 archived logs a disco, sin límite) | Parada por disco lleno | **Alta** |
+| 2 control files + 3 redo en la misma carpeta | Punto único de fallo | **Alta** |
+| ADR fuera del volumen persistente | Pierde alert log al recrear | Media |
+| 4 esquemas sin estadísticas | Optimizador a ciegas | Media |
+| 2 índices con mal factor de agrupamiento | Rangos caros | Baja |
+| 7 ORA- = ruido (contenedor + propio lab) | Ninguno real | Ninguna |
+| Verificación final `16` | — | **TODO OK** |
+
+**Pregunta 24: informe diario de estado de una base de producción con el mínimo riesgo. ¿Qué enfoque sigue el mínimo privilegio?**
+
+**B. Un usuario común de solo lectura con `SELECT_CATALOG_ROLE`, `CONTAINER_DATA` y el GRANT puntual de `V_$DIAG_ALERT_EXT`.** Es exactamente lo que construí en las Partes B y J con `C##OPS_RO`: puede leer diccionario y alert log, pero **no** tiene privilegios `ANY` de escritura ni el rol DBA. La opción A (SYS desde cron) y la C (DBA con contraseña en el script) dan demasiado poder; la D (SYSTEM con contraseña en variable de entorno) expone credenciales y sigue siendo un usuario potente.

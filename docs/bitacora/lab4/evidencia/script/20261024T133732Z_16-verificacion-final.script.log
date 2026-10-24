@@ -1,0 +1,44 @@
+== Parte A · Respaldo del Lab 3 ==
+  [OK]    backup backups/20261024T110346Z_lab3-final íntegro
+== Partes A, C y D · Correcciones del Lab 3 ==
+  [OK]    tablespaces de negocio (5)
+  [OK]    datafiles de negocio fuera de FREE/FREEPDB1 (0)
+  [OK]    archivos cuya ruta real sale del volumen (0)
+  [OK]    cuentas ADMIN_* con contraseña (0)
+  [OK]    datos V002 estudiantes/asignaturas/matrículas (20000/40/60000)
+  [OK]    8181 ya no se publica
+== Partes B, E y F · Cuenta de observabilidad, instancia y parámetros ==
+  [OK]    CDB abierta (READWRITE)
+  [OK]    FREEPDB1 abierta (READWRITE)
+  [OK]    C##OPS_RO es común (YES)
+  [OK]    open_cursors devuelto a su valor (300)
+  [OK]    db_files sin línea pendiente en el SPFILE (FALSE)
+== Partes I a N · Contenedores, archivos, bloque, capacidad y filas migradas ==
+  [OK]    PDB de prueba PDB_LAB4 borrada (0)
+  [OK]    usuarios de prueba *LAB4* borrados (0)
+  [OK]    C##OPS_RO lee el alert log (V_$DIAG_ALERT_EXT) (1)
+  [OK]    C##OPS_RO sin privilegios ANY de escritura (0)
+  [OK]    banco de pruebas TBS_LAB4 borrado (0)
+  [OK]    volcado de bloque guardado
+== Evidencias ==
+  [OK]    evidencia 00
+  [OK]    evidencia 01
+  [OK]    evidencia 02
+  [OK]    evidencia 03
+  [OK]    evidencia 04
+  [OK]    evidencia 05
+  [OK]    evidencia 06
+  [OK]    evidencia 07
+  [OK]    evidencia 08
+  [OK]    evidencia 09
+  [OK]    evidencia 10
+  [OK]    evidencia 11
+  [OK]    evidencia 12
+  [OK]    evidencia 13
+  [OK]    evidencia 14
+  [OK]    evidencia 15
+  [OK]    PFILE versionado
+  [OK]    config/.env fuera de Git
+  [OK]    backups/ fuera de Git
+
+RESULTADO: TODO OK. Lab 4 listo para entregar.
