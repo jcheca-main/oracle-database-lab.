@@ -41,3 +41,23 @@ Dos riesgos concretos de darle el rol DBA "para que no le falte nada":
 2. **Superficie de ataque enorme si la cuenta se filtra.** DBA incluye crear usuarios y conceder privilegios (`CREATE USER`, `GRANT`): con la contraseña de una cuenta de monitorización, un atacante obtendría control de la base completa en todos los contenedores, no lectura. Y auditoría: una cuenta de observación con DBA no es defendible ante un revisor, porque ya no demuestra mínimo privilegio.
 
 Privilege exacto para leer el alert log (Parte J, `11-ampliar-ops-ro.sql`): `GRANT SELECT ON sys.v_$diag_alert_ext TO c##ops_ro CONTAINER = ALL;`. Conviene saber que `SELECT_CATALOG_ROLE` **no** incluye esa vista: se concede el objeto concreto y nada más (least privilege de verdad).
+
+## Parte C - Reubicar los datafiles y prueba de persistencia
+
+### Qué cambió y qué demostré
+
+Los cinco datafiles de negocio pasaron de `$ORACLE_HOME/dbs` (dbconfig) a `/opt/oracle/oradata/FREE/FREEPDB1/`, con `AUTOEXTEND ON NEXT 50M MAXSIZE 1G`, usando el método OFFLINE (`ALTER TABLESPACE ... OFFLINE NORMAL` → `cp -p` → `RENAME DATAFILE` → `ONLINE` → borrar el original). Intenté primero el método online y no procede: `ALTER DATABASE MOVE DATAFILE` es una opción de Enterprise Edition y Free devuelve ORA-00439, así que OFFLINE es el único camino aquí.
+
+Prueba de fuego: con los datafiles ya dentro del volumen, hice `SHUTDOWN IMMEDIATE` → `docker rm oralab-26ai` → `05-crear-contenedor.sh` v2 (sin 8181 y sin contraseñas al reutilizar el volumen). Antes y después: mismos 5 tablespaces ONLINE, mismas 14 tablas de los cinco `admin_*` y mismo conteo. Solo cambió el identificador del contenedor: los archivos viven en el volumen.
+
+Revisé el defecto 5 del documento del Lab 3 (K.2): en mi repo ya estaba bien (`V001__create_esquemas_negocio.sql`) y la variable es `APP_USER_PWD` (no `APP_USER_PASSWORD`, que es solo el nombre que espera la imagen): no había nada que corregir.
+
+### Pregunta tipo examen P2
+
+**Respuesta: B.**
+
+`ALTER TABLESPACE tbs OFFLINE;` (checkpoint y cierre limpio del tablespace) → copia del archivo con el SO → `ALTER TABLESPACE tbs RENAME DATAFILE 'origen' TO 'destino';` (solo actualiza la ruta del control file, no mueve nada) → `ALTER TABLESPACE tbs ONLINE;` (Oracle abre y valida la cabecera del archivo nuevo).
+
+- A incorrecta: `MOVE DATAFILE` online requiere Enterprise Edition; la base es Standard y además habría estado indisponible igualmente.
+- C incorrecta: `RENAME DATAFILE` no copia nada y el tablespace debe estar OFFLINE.
+- D incorrecta: `SHUTDOWN ABORT` no hace checkpoint y obligaría a recuperación de instancia; además el tablespace se puede manejar con la base abierta.
