@@ -274,6 +274,10 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 >
 > **A y C.** **A**: reduce la contención en la hoja más a la derecha con claves crecientes (dispersa las claves consecutivas). **C**: no puede usarse para un rango (`BETWEEN`) sobre la clave, porque el índice ya no está ordenado por ella — medido: el rango cuesta **878 lecturas** (recorrido completo) frente a **4** del índice normal. **B** es falsa (los rangos son más lentos, no más rápidos), **D** falsa (el CF es una propiedad de la **tabla**), **E** falsa (sigue habiendo divisiones: 511).
 
+> **P12 · ¿Qué remedio elegirías para el patrón cola en producción, en horario de servicio, y por qué?**
+>
+> **`ALTER INDEX ... COALESCE`.** Es el único que resuelve el síntoma **en línea y con el menor coste**: fusiona las hojas vecinas medio vacías sin reconstruir, sin necesitar **espacio doble** ni generar el redo masivo del `REBUILD ONLINE` (peligroso en hora punta). Medido: **238 → 2 lecturas** y 437 → 201 hojas, sin bloquear las escrituras. El `SHRINK SPACE` también funciona en línea y además devuelve el espacio (4 → 1,69 MB), pero si solo quieres quitar el síntoma, el COALESCE es la mínima intervención. El `REBUILD` se reserva para una causa concreta y medida. Y la **cura de verdad** —particionar por fecha y vaciar particiones enteras— es un cambio de **diseño**, que se saca del horario de servicio.
+
 > **Reto profesional · Diagnostica sin ver el script (con `grafico-indice.sh` + `INDEX_STATS`) y justifica con dos cifras antes/después.**
 >
 > **Diagnóstico: PATRÓN COLA** (evidencias `07b-patron-cola.script.log` y `07b-grafico-IX_COLA-antes.script.log`).
@@ -282,3 +286,24 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 > - **Síntoma que lo confirma**: «dame el siguiente mensaje» (clave más baja) = **238 lecturas** para **1 fila**.
 >
 > **Remedio y dos cifras antes/después**: `COALESCE` (en línea, el más barato). **Lecturas del siguiente mensaje: 238 → 2. Hojas: 437 → 201.** (`SHRINK SPACE` haría lo mismo y además devolvería el espacio: 4 → 1,69 MB; el REBUILD es desproporcionado aquí.)
+
+## Parte I — SCN y checkpoints: el reloj de la base
+
+**Empieza la durabilidad.** `08-scn-checkpoint.script.log`:
+- **El SCN solo sube**: dos lecturas seguidas de `v$database.current_scn` dan 5322308 y 5322309 — hay actividad interna aunque nadie haga nada.
+- **Sincronización control file / cabeceras**: el checkpoint en el control file (`v$datafile.checkpoint_change#`) y el de la cabecera de cada archivo (`v$datafile_header.checkpoint_change#`) coinciden → `sincronizado`. `PDB$SEED` (con_id 2) se queda en 2098101 porque está en **solo lectura**: su checkpoint no avanza.
+- Tras un `UPDATE` + `ALTER SYSTEM CHECKPOINT`, los archivos abiertos pasan al SCN nuevo (5322314): `DBWn` escribió los bloques sucios y `CKPT` apuntó el SCN en ambos sitios.
+- **MTTR**: `estimated_mttr` **26 s** con `actual_redo_blks` **429383** pendientes; `fast_start_mttr_target` = 0, `log_checkpoint_timeout` = 1800.
+
+> **P13 · Con tu evidencia 08: ¿qué valores compara Oracle al abrir para decidir si hace falta recuperación?**
+>
+> Compara el **SCN de checkpoint del control file** con el **SCN de la cabecera del propio datafile**: `v$datafile.checkpoint_change#` (lo que el control file cree que tiene cada archivo) frente a `v$datafile_header.checkpoint_change#` (lo que dice la cabecera del archivo). En mi evidencia `08-scn-checkpoint.script.log` los dos valen **5314307** en todos los archivos abiertos → `sincronizado`, **no hace falta recuperación**. Si no coinciden, ese archivo necesita recuperación (Oracle aplica redo desde el checkpoint hasta el SCN de la cabecera). `PDB$SEED` está por detrás (2098101) pero es normal: está en solo lectura.
+
+> **I1 (tipo examen) · Al abrir la base, ¿qué compara Oracle para decidir si un datafile necesita recuperación?**
+>
+> **B. El SCN de checkpoint del control file con el de la cabecera del datafile.** Es exactamente lo que midí en la P13 / evidencia 08 (`v$datafile.checkpoint_change#` vs `v$datafile_header.checkpoint_change#`). No es el tamaño (A), ni la fecha del SO (C), ni los bloques sucios del buffer cache (D).
+
+> **Reto profesional · El MTTR bajo carga.**
+>
+> Con la base en marcha, antes del UPDATE: `estimated_mttr` **26 s**, `actual_redo_blks` **429736**. Hice un `UPDATE` de **20 000 filas** sobre `pedido` (y `COMMIT`, **sin** checkpoint) y volví a medir (`08-reto-mttr.script.log`): `estimated_mttr` **36 s** (+10) y `actual_redo_blks` **436858** (+7122 bloques de redo).
+> **Relación en una frase**: cada bloque de redo pendiente es trabajo que la recuperación de instancia tendrá que **replayar** desde el último checkpoint, así que a más redo pendiente (`actual_redo_blks`) más tiempo estimado de recuperación (`estimated_mttr`); el parámetro que lo acota es **`FAST_START_MTTR_TARGET`** —bajarlo fuerza checkpoints más frecuentes, deja menos redo pendiente y acorta el MTTR a costa de más escritura en datafiles—.

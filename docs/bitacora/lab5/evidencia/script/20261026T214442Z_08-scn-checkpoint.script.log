@@ -1,0 +1,51 @@
+
+===== 1. El SCN avanza aunque nadie haga nada (transacciones internas, MMON, jobs...) =====
+
+CURRENT_SCN HORA_DEL_SCN
+----------- --------------------
+    5322308 2026-10-26 21:44:40
+
+CURRENT_SCN
+-----------
+    5322309
+
+===== 2. Último checkpoint: control file (v$database / v$datafile) frente a cabeceras (v$datafile_header) =====
+
+CKPT_EN_CONTROL_FILE
+--------------------
+	     5314307
+
+     FILE#     CON_ID ARCHIVO	       CKPT_CONTROL_FILE CKPT_CABECERA ESTADO
+---------- ---------- ---------------- ----------------- ------------- ------------
+	 1	    1 system01.dbf		 5314307       5314307 sincronizado
+	 2	    2 system01.dbf		 2098101       2098101 sincronizado
+	 3	    1 sysaux01.dbf		 5314307       5314307 sincronizado
+	 4	    2 sysaux01.dbf		 2098101       2098101 sincronizado
+	16	    3 academia01.dbf		 5314307       5314307 sincronizado
+(con_id 2 = PDB$SEED: está en solo lectura, por eso su checkpoint no avanza)
+
+===== 3. Cambiamos datos y forzamos un CHECKPOINT completo =====
+
+CKPT_EN_CONTROL_FILE CURRENT_SCN
+-------------------- -----------
+	     5322314	 5322982
+
+     FILE#     CON_ID ARCHIVO	       CKPT_CONTROL_FILE CKPT_CABECERA
+---------- ---------- ---------------- ----------------- -------------
+	 1	    1 system01.dbf		 5322314       5322314
+	 2	    2 system01.dbf		 2098101       2098101
+	 3	    1 sysaux01.dbf		 5322314       5322314
+	 4	    2 sysaux01.dbf		 2098101       2098101
+	16	    3 academia01.dbf		 5322314       5322314
+
+===== 4. ¿Cuánto tardaría hoy una recuperación de instancia? (MTTR estimado) =====
+
+TARGET_MTTR ESTIMATED_MTTR RECOVERY_ESTIMATED_IOS ACTUAL_REDO_BLKS
+----------- -------------- ---------------------- ----------------
+	  0		26		       93	    429383
+
+NAME						 VALUE
+------------------------------------------------ ------------
+log_checkpoint_interval 			 0
+log_checkpoint_timeout				 1800
+fast_start_mttr_target				 0
