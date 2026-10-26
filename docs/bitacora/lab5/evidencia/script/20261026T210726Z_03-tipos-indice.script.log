@@ -1,0 +1,111 @@
+
+
+
+
+===== 1. ÚNICO (Q13, verificación de identidad): buscar Y garantizar que no hay dos DNI iguales =====
+Q13 sin ??ndice                filas=      1  lecturas l??gicas=   1486  f??sicas=    0      5.6 ms
+                               plan: TABLE ACCESS FULL CLIENTE
+Q13 con UNIQUE (dni)           filas=      1  lecturas l??gicas=      3  f??sicas=    0       .1 ms
+                               plan: TABLE ACCESS BY INDEX ROWID CLIENTE > INDEX UNIQUE SCAN UX_CLI_DNI
+-- Y ahora la base de datos, no la aplicación, impide el duplicado (ORA-00001 esperado):
+INSERT INTO tiendasur.cliente VALUES (999999, '00004711L', 'otro@tiendasur.es', 'X', 'Y', NULL, 'ES', 'Lorca', SYSDATE)
+*
+ERROR at line 1:
+ORA-00001: unique constraint (TIENDASUR.UX_CLI_DNI) violated on table TIENDASUR.CLIENTE columns (DNI)
+ORA-03301: (ORA-00001 details) row with column values (DNI:'00004711L') already exists
+Help: https://docs.oracle.com/error-help/db/ora-00001/
+
+
+
+===== 2. COMPUESTO y regla del prefijo izquierdo (Q6, clientes de Lorca) con IX_CLI_PAIS_CIUDAD (pais, ciudad) =====
+Q6 solo ciudad                 filas=    100  lecturas l??gicas=    144  f??sicas=    0       .7 ms
+                               plan: TABLE ACCESS BY INDEX ROWID BATCHED CLIENTE > INDEX SKIP SCAN IX_CLI_PAIS_CIUDAD
+Q6 pais + ciudad               filas=    100  lecturas l??gicas=    103  f??sicas=    0       .6 ms
+                               plan: TABLE ACCESS BY INDEX ROWID BATCHED CLIENTE > INDEX RANGE SCAN IX_CLI_PAIS_CIUDAD
+(Sin la primera columna, Oracle puede hacer SKIP SCAN: una búsqueda por cada país (40). Funciona, pero es un parche, no un diseño)
+
+===== 3. COMPUESTO y CUBRIENTE (Q7, la consulta más frecuente: historial del cliente en la app) =====
+Q7 con ix_ped_cliente          filas=      4  lecturas l??gicas=     15  f??sicas=    0       .4 ms
+                               plan: SORT ORDER BY > TABLE ACCESS BY INDEX ROWID BATCHED PEDIDO > INDEX RANGE SCAN IX_PED_CLIENTE
+Q7 (id_cliente, fecha)         filas=      4  lecturas l??gicas=      7  f??sicas=    0       .1 ms
+                               plan: TABLE ACCESS BY INDEX ROWID PEDIDO > INDEX RANGE SCAN DESCENDING IX_PED_CLI_FEC
+Q7 cubriente                   filas=      4  lecturas l??gicas=      3  f??sicas=    0       .2 ms
+                               plan: INDEX RANGE SCAN DESCENDING IX_PED_CLI_FEC_CUB
+(Igualdad primero, rango después: el índice devuelve las filas YA ORDENADAS (sin SORT). Cubriente: ni siquiera toca la tabla)
+(Oracle no tiene INCLUDE como SQL Server o PostgreSQL: las columnas "de regalo" se añaden al final de la clave)
+
+===== 4. FUNCIONAL (Q1, inicio de sesión con UPPER(email)) =====
+Q1 UPPER(email) tal cual       filas=      1  lecturas l??gicas=   1486  f??sicas=    0     44.2 ms
+                               plan: TABLE ACCESS FULL CLIENTE
+Q1 con ??ndice funcional       filas=      1  lecturas l??gicas=      4  f??sicas=    0       .1 ms
+                               plan: TABLE ACCESS BY INDEX ROWID BATCHED CLIENTE > INDEX RANGE SCAN IX_CLI_UPPER_EMAIL
+(Funciona, pero es un índice más que mantener. Como el email se guarda en minúsculas, lo profesional es REESCRIBIR: Parte F)
+
+===== 5. PARCIAL a la manera de Oracle (Q12, pedidos pendientes): una columna virtual que es NULL salvo en 'P' =====
+Q12 (estado, fecha)            filas=  20000  lecturas l??gicas=    246  f??sicas=    0     15.3 ms
+                               plan: TABLE ACCESS BY INDEX ROWID PEDIDO > INDEX RANGE SCAN IX_PED_EST_FEC
+Q12 parcial                    filas=  20000  lecturas l??gicas=    239  f??sicas=    0     17.8 ms
+                               plan: TABLE ACCESS BY INDEX ROWID PEDIDO > INDEX FULL SCAN IX_PED_PENDIENTES
+
+INDEX_NAME                  HOJAS   ENTRADAS
+---------------------- ---------- ----------
+IX_PED_EST_FEC               2933    1000000
+IX_PED_PENDIENTES              54      20000
+(Oracle no guarda en un B-tree las claves totalmente NULL: el índice "parcial" solo tiene el 2 % de las filas. 150 UPDATE/s de estado
+tocan un índice diminuto en lugar de uno de un millón de entradas)
+
+===== 6. BITMAP (Q14, almacén de datos: los analistas combinan filtros a su gusto) =====
+Q14 sin bitmaps                filas=      1  lecturas l??gicas=   4073  f??sicas=    0     74.4 ms
+                               plan: SORT AGGREGATE > TABLE ACCESS FULL VENTA_HECHO
+Q14 con 4 bitmaps              filas=      1  lecturas l??gicas=    528  f??sicas=    0     12.9 ms
+                               plan: SORT AGGREGATE > TABLE ACCESS BY INDEX ROWID BATCHED VENTA_HECHO > BITMAP CONVERSION TO ROWIDS > BITMAP AND > BITMAP INDEX SINGLE VALUE BX_VH_CATEGORIA > BITMAP INDEX SINGLE VALUE BX_VH_REGION > BITMAP INDEX SINGL
+E VALUE BX_VH_ANIO > BITMAP INDEX SINGLE VALUE BX_VH_CANAL
+
+INDEX_NAME             INDEX_TYPE                  HOJAS     CLAVES
+---------------------- ---------------------- ---------- ----------
+BX_VH_ANIO             BITMAP                         98          5
+BX_VH_CANAL            BITMAP                         63          3
+BX_VH_CATEGORIA        BITMAP                        213         25
+BX_VH_REGION           BITMAP                        114          6
+IX_VH_REGION_BTREE     NORMAL                       1954          6
+(El bitmap de region ocupa una fracción del B-tree equivalente. Pero cada bitmap bloquea rangos enteros de filas al modificarlas:
+en OLTP con escrituras concurrentes es un desastre; en un almacén que se carga de noche, ideal)
+
+===== 7. HASH e IOT (Q15, validar una sesión por su token: 40 000 por segundo) =====
+
+
+
+Q15 mont??culo + PK            filas=      1  lecturas l??gicas=      4  f??sicas=    0       .3 ms
+                               plan: TABLE ACCESS BY INDEX ROWID SESION_HEAP > INDEX UNIQUE SCAN SYS_C009111
+Q15 IOT                        filas=      1  lecturas l??gicas=      3  f??sicas=    0       .2 ms
+                               plan: INDEX UNIQUE SCAN SYS_IOT_TOP_73768
+Q15 cl??ster hash              filas=      1  lecturas l??gicas=      1  f??sicas=    0       .2 ms
+                               plan: TABLE ACCESS HASH SESION_HASH
+Q15 limpieza en hash           filas=      1  lecturas l??gicas=   2770  f??sicas=    0       17 ms
+                               plan: SORT AGGREGATE > TABLE ACCESS FULL SESION_HASH
+(Hash: la clave se convierte en la dirección del bloque, 1 lectura. Pero no sirve para rangos: la limpieza recorre la tabla entera.
+IOT: la tabla ES el índice, ahorra el salto a la tabla. Montículo + PK: la opción por defecto, buena casi siempre)
+
+===== 8. Ningún índice es gratis: lo que ocupa cada uno =====
+
+INDEX_NAME             INDEX_TYPE                     MB      HOJAS
+---------------------- ---------------------- ---------- ----------
+IX_PED_CLI_FEC_CUB     NORMAL                         40       4983
+IX_PED_CLI_FEC         NORMAL                         27       3331
+IX_PED_EST_FEC         NORMAL                         24       2933
+IX_PED_FECHA           NORMAL                         22       2653
+IX_PED_CLIENTE         NORMAL                         18       2216
+IX_PED_IMPORTE         NORMAL                         18       2204
+PK_PEDIDO              NORMAL                         16       1875
+UX_CLI_EMAIL           NORMAL                          5        501
+IX_CLI_UPPER_EMAIL     FUNCTION-BASED NORMAL           5        516
+UX_CLI_DNI             NORMAL                          3        279
+IX_CLI_PAIS_CIUDAD     NORMAL                          3        349
+PK_CLIENTE             NORMAL                          2        187
+IX_PED_PENDIENTES      FUNCTION-BASED NORMAL          .5         54
+
+===== 9. Limpieza: el banco vuelve a su estado de partida (las decisiones se aplican por migración, V005) =====
+
+INDICES_TIENDASUR
+-----------------
+                7

@@ -1,0 +1,16 @@
+
+Session altered.
+
+=== Q9: 20 pedidos mas recientes con todas sus columnas (IX_PED_FECHA, toca la tabla) ===
+Q9 20 recientes (IX_PED_FECHA) filas=	  20  lecturas l??gicas=      5  f??sicas=    0       .4 ms
+			       plan: COUNT STOPKEY > VIEW > TABLE ACCESS BY INDEX ROWID PEDIDO > INDEX FULL SCAN DESCENDING IX_PED_FECHA
+
+PL/SQL procedure successfully completed.
+
+=== tamanio de referencia (seccion 8) ===
+
+OBJETO			    MB
+------------------- ----------
+tabla pedido		    42
+indice IX_PED_FECHA	    22
+
