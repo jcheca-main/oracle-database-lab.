@@ -1,0 +1,44 @@
+
+Session altered.
+
+=== Pregunta 1/2 · VIABILIDAD: selectividad de 'Gonz%' (~2.1%) y lecturas base SIN indice ===
+Q4b sin indice (hoy)	       filas=	2056  lecturas l??gicas=   1490  f??sicas=    0      8.2 ms
+			       plan: TABLE ACCESS FULL CLIENTE
+
+PL/SQL procedure successfully completed.
+
+=== proponer V006: ix_cli_apellidos (ONLINE) ===
+
+Index created.
+
+Q4b con ix_cli_apellidos       filas=	2056  lecturas l??gicas=   2024  f??sicas=    0      4.7 ms
+			       plan: TABLE ACCESS BY INDEX ROWID BATCHED CLIENTE > INDEX RANGE SCAN IX_CLI_APELLIDOS
+
+PL/SQL procedure successfully completed.
+
+=== el CF decide: indice propuesto vs bloques de la tabla ===
+
+INDEX_NAME															 CLUSTERING_FACTOR BLOQUES_TABLA   NUM_ROWS
+-------------------------------------------------------------------------------------------------------------------------------- ----------------- ------------- ----------
+IX_CLI_APELLIDOS															     84964	    1517     100000
+
+=== Pregunta 3 · ESCRITURA: bloques/redo por INSERT con el indice (se deshace) ===
+INSERT 1 fila con ix_cli_apell filas=	  1  lecturas l??gicas=     18	bloques modificados=	14  redo=     2 KB	.2 ms  | por fila: 14 bloques, 1984 bytes de redo
+
+PL/SQL procedure successfully completed.
+
+=== Pregunta 4 · REDUNDANCIA: ¿otro indice cubre apellidos por prefijo? ===
+
+OTROS_IDX_APELLIDOS
+-------------------
+		  1
+
+=== limpieza: V006 NO se fusiona (conclusion: no compensa) ===
+
+Index dropped.
+
+
+INDICES_TIENDASUR
+-----------------
+		9
+

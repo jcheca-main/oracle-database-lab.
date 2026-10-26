@@ -203,3 +203,48 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 > - **Reescrita** (`(telefono>='600' AND telefono<'601') OR apellidos='Gil'`): 981 filas, **722 lecturas**, `BITMAP OR` sobre los dos índices.
 >
 > La reescritura baja de 1487 a 722, pero no a unas pocas lecturas: los 981 teléfonos que empiezan por `600` están **dispersos** (agrupamiento malo en `telefono`), así que seguir el índice toca cientos de bloques. Ganancia real, pero deja claro que la ramificación de apellidos no aporta nada (0 filas).
+
+## Parte G — Protocolo de diseño de índices y coste de escritura (V005)
+
+**Ningún índice es gratis.** `06-indices.script.log` mide el coste de escribir en los tres escenarios: **hoy** (4 índices) INSERT **10,1 bloques/fila** y 1305 B de redo; **con la propuesta del compañero** (5 índices más → 9) **20,2 bloques/fila** (el doble de trabajo por escritura); **con V005** (5 índices) **12,1 bloques/fila**. Cada índice son ~2 bloques modificados por INSERT (la hoja y su undo).
+
+**El protocolo de cinco preguntas, con números:**
+1. **Necesidad** (`MONITORING USAGE`): la carga habitual (Q2, Q3, Q7, Q8, Q9, Q12) marca **sin uso** `IX_PED_CANAL`, `IX_PED_CLIENTE`, `IX_PED_FEC_CLI` e `IX_PED_IMPORTE`; en uso `IX_PED_CLI_FEC`, `IX_PED_CP`, `IX_PED_ESTADO`, `IX_PED_FECHA`. En producción la ventana es de **semanas** (con cierres de mes); 23ai guarda además `DBA_INDEX_USAGE` (~15 min de retraso).
+2. **Viabilidad**: `canal` (3 valores, 33 %) y `estado` (4, 25 %) están **muy por encima** del umbral (~0,5 %): no viables para igualdad. `cp` (0,009 %), `importe` (0,002 %) y `cliente` (0,001 %) sí.
+3. **Escritura**: ver arriba (10,1 → 20,2 con la propuesta).
+4. **Redundancia** (`DBA_IND_COLUMNS`): `IX_PED_CLIENTE` es prefijo de `IX_PED_CLI_FEC` y `IX_PED_FECHA` de `IX_PED_FEC_CLI`: sobra uno de cada pareja. (Un índice **único** no es redundante aunque sea prefijo; y la clave ajena `id_cliente` **siempre** necesita un índice que empiece por ella, o cada DELETE de un cliente bloquea `PEDIDO` entero.)
+5. **Ciclo de vida**: `IX_PED_IMPORTE` se pone **INVISIBLE** y la carga sigue igual (Q2: 333 lecturas); si en la observación nadie lo echa de menos, se borra por migración.
+
+**V005 (la decisión versionada).** Crea `ux_cli_dni` (Q13, garantiza unicidad), `ix_ped_cli_fec_cub` (Q7 cubriente), `ix_ped_pendientes` (parcial, solo 2 %, sobre columna virtual `fecha_pendiente`), `ix_ped_cp` (Q3 reescrita); **borra** `ix_ped_cliente` (prefijo del cubriente) e `ix_ped_importe` (cero usos). Todo `ONLINE` e idempotente (comprueba `ux_cli_dni`). Al final: 9 índices (CLIENTE 4, PEDIDO 5).
+
+> **P10 · Con tu evidencia 06: bloques modificados por INSERT con 4, 9 y 5 índices. ¿Qué índices de la propuesta del compañero rechazaste y con qué dato?**
+>
+> INSERT por fila: **10,1** bloques (4 índices) → **20,2** (9 índices, la propuesta) → **12,1** con V005 (5 índices). Evidencia `06-indices.script.log`.
+> De los cinco propuestos **rechacé tres**:
+> - **`canal`**: sin uso en la observación (P1) y selectividad **33 %** por valor (P2), muy por encima del ~0,5 %: nunca viable para igualdad.
+> - **`estado`** para igualdad: selectividad **25 %** (P2); el único valor que interesa, `P` (2 %), se sirve mejor con el índice **parcial** `ix_ped_pendientes` de V005.
+> - **`(fecha, id_cliente)` (`IX_PED_FEC_CLI`)**: **redundante** (P4) — `IX_PED_FECHA` ya es su prefijo izquierdo — y sin uso (P1).
+> Y del conjunto existente **borré** `ix_ped_cliente` (prefijo del cubriente `ix_ped_cli_fec_cub`, que sigue cubriendo la clave ajena) e `ix_ped_importe` (cero usos). Los que sí sobrevivieron: `(id_cliente, fecha)` como cubriente y `codigo_postal`.
+
+> **G1 (tipo examen) · ¿Cómo comprobar si un índice se sigue necesitando antes de borrarlo, sin dejar de mantenerlo y con marcha atrás al instante?**
+>
+> **B. `ALTER INDEX ... INVISIBLE`.** El optimizador lo ignora pero Oracle **lo sigue manteniendo** (sigue pagando el coste de escritura); si algo empeora, `ALTER INDEX ... VISIBLE` lo devuelve en un segundo, sin reconstruir nada. `UNUSABLE` (A) lo deja inservible y sin mantener, `DROP` (C) no tiene marcha atrás instantánea y `NOLOGGING` (D) no afecta al uso.
+
+> **G2 (tipo examen) · Tabla con 3 índices B-tree y 500 INSERT/s. ¿Cuántos bloques/s añade un cuarto índice?**
+>
+> **B. Unos 1000.** Medido en la Parte G (P3): cada índice suma **~2 bloques modificados por INSERT** (la hoja que se divide/modifica y su undo). 500 INSERT/s × 2 = **1000 bloques/s** de más. (Y esos bloques se escriben en redo y en undo, y hay que hacerles un `DROP` o un `REBUILD` más adelante.)
+
+> **Reto profesional · Defiende tu propio índice (V006) para una consulta que V005 NO cubre.**
+>
+> **Consulta:** Q4b — `SELECT id_cliente, nombre, apellidos FROM tiendasur.cliente WHERE apellidos LIKE 'Gonz%'` (V005 no cubre `apellidos`). **Propuesta:** `ix_cli_apellidos` sobre `(apellidos)`. Evidencia `06-reto-v006.script.log`.
+>
+> **Las cinco preguntas con números del banco:**
+> 1. **Necesidad**: es una búsqueda real (localizar por apellido en la aplicación).
+> 2. **Viabilidad**: `Gonz%` son **2056 filas** = **2,1 %** de `cliente`, por encima del umbral de equilibrio (~0,5 % de la Parte E).
+> 3. **Escritura**: con el índice, un INSERT cuesta **14 bloques/fila** (≈ +2 por el índice, para siempre).
+> 4. **Redundancia**: **no** redundante (ningún otro índice cubre `apellidos`).
+> 5. **Ciclo de vida**: n/a (índice nuevo).
+>
+> **Medido antes/después:** sin índice **1490 lecturas** (`TABLE ACCESS FULL`); con `ix_cli_apellidos` **2024 lecturas** (`INDEX RANGE SCAN`). El **CF del propuesto es 84964** frente a los **1517 bloques** de `cliente` = **agrupamiento malo**.
+>
+> **Conclusión (una respuesta profesional): NO compensa.** El índice lee **más** que el recorrido completo (2024 > 1490): los 2056 `Gonz%` están **dispersos**, así que seguirlas por el índice toca ~2024 bloques distintos, frente a un único barrido secuencial de 1490. Y encima **añade ~2 bloques de escritura por INSERT**. Por eso lo **documenté y NO fusioné** V006; lo correcto para `Gonz%` sigue siendo el recorrido completo (o, si el apellido es crítico, un reparto distinto del dato, no un índice por encima).
