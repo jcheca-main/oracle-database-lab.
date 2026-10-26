@@ -1,0 +1,21 @@
+
+===== 1. 200 000 inserciones de una fila en cada tabla, contando las divisiones de hoja (leaf node splits) =====
+AZAR (claves aleatorias)           divisiones de hoja =   595   de ellas 90/10 =     0
+CRECIENTE (secuencia, fecha...)    divisiones de hoja =   398   de ellas 90/10 =   398
+CRECIENTE con ??ndice REVERSE      divisiones de hoja =   511   de ellas 90/10 =     0
+(90/10: al llenarse la hoja de la derecha, Oracle abre una nueva casi vacía y deja la vieja LLENA. 50/50: reparte a medias)
+
+===== 2. Resultado: hojas y llenado de cada índice =====
+
+INDEX_NAME     INDEX_TYPE                       HOJAS ENTRADAS_POR_HOJA
+-------------- --------------------------- ---------- -----------------
+IX_CRECIENTE   NORMAL                             399               501
+IX_INVERTIDA   NORMAL/REV                         512               391
+IX_AZAR        NORMAL                             596               336
+(Teoría, Unidad 3: con inserciones al azar un B-tree se estabiliza en torno al 69 % de llenado (ln 2). Compruébalo en el gráfico)
+
+===== 3. El precio del índice REVERSE: reparte la "hoja caliente" de la derecha, pero ya no sirve para rangos =====
+rango con ??ndice normal       filas=      1  lecturas l??gicas=      4  f??sicas=    0       .2 ms
+                               plan: SORT AGGREGATE > TABLE ACCESS BY INDEX ROWID BATCHED CRECIENTE > INDEX RANGE SCAN IX_CRECIENTE
+rango con ??ndice REVERSE      filas=      1  lecturas l??gicas=    878  f??sicas=    0        5 ms
+                               plan: SORT AGGREGATE > TABLE ACCESS FULL INVERTIDA

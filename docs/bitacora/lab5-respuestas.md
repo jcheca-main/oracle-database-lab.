@@ -248,3 +248,37 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 > **Medido antes/después:** sin índice **1490 lecturas** (`TABLE ACCESS FULL`); con `ix_cli_apellidos` **2024 lecturas** (`INDEX RANGE SCAN`). El **CF del propuesto es 84964** frente a los **1517 bloques** de `cliente` = **agrupamiento malo**.
 >
 > **Conclusión (una respuesta profesional): NO compensa.** El índice lee **más** que el recorrido completo (2024 > 1490): los 2056 `Gonz%` están **dispersos**, así que seguirlas por el índice toca ~2024 bloques distintos, frente a un único barrido secuencial de 1490. Y encima **añade ~2 bloques de escritura por INSERT**. Por eso lo **documenté y NO fusioné** V006; lo correcto para `Gonz%` sigue siendo el recorrido completo (o, si el apellido es crítico, un reparto distinto del dato, no un índice por encima).
+
+## Parte H — Divisiones de hoja, patrón cola y remedios
+
+**Cómo crece un índice** (`07a-crecimiento.script.log`, 200 000 altas por tabla). Con `V$MYSTAT` (`leaf node splits` / `leaf node 90-10 splits`) y `grafico-indice.sh`:
+- **AZAR** (claves aleatorias): **595 divisiones, 0 son 90/10**, llenado **75 %** (mapa `=`/`-`/`#` mezclado). Es el estado estable de un B-tree con inserciones aleatorias: la teoría (Unidad 3) predice ~69 % (ln 2) y aquí se mide 75 %.
+- **CRECIENTE** (secuencia/fecha): **398 divisiones, las 398 son 90/10**, llenado **100 %** (mapa todo `#`). La hoja de la derecha se llena y Oracle abre una nueva casi vacía, dejando la vieja completa.
+- **REVERSE** (claves invertidas): 511 divisiones, 0 son 90/10, 78 %. **Su precio**: el rango `k BETWEEN 1000 AND 1100` con el índice normal cuesta **4 lecturas**; con REVERSE, **878** (recorrido completo) — el índice ya no está ordenado por la clave.
+
+**El patrón cola** (`07b-patron-cola.script.log`): entran 200 000 mensajes, se **borran los 150 000 más antiguos**, entran 50 000 más. Síntoma: «dame el siguiente mensaje» (el más antiguo) cuesta **238 lecturas** frente a **2** del índice sano, porque el índice baja a la hoja más a la izquierda y la encuentra **vacía**, y la siguiente… hasta la primera entrada viva. `INDEX_STATS`: **437 hojas**, **75 236 borradas (43 %)** que aún ocupan sitio, 236 hojas vacías. **`DBA_INDEXES.LEAF_BLOCKS` no lo ve** (lo rellena `DBMS_STATS` y no cuenta vacías): hacen falta `VALIDATE STRUCTURE` o el gráfico.
+
+**Remedios medidos** (`07c-remedios.script.log`): COALESCE **238 → 2 lecturas** (437 → 201 hojas, en línea, no devuelve espacio); SHRINK SPACE **238 → 2** y devuelve el espacio (**4 → 1,69 MB**, baja la marca de agua); REBUILD ONLINE 223 hojas pero necesita **espacio doble** y mucho redo. La cura de verdad es de **diseño**: particionar por fecha y vaciar particiones enteras.
+
+> **P11 · Distingue, con tus gráficos de la Parte H, un índice con divisiones 50/50, uno con 90/10 y uno con patrón cola.**
+>
+> - **50/50 (`IX_AZAR`)**: histograma **repartido** entre el 40 % y el 99 % (pico en 80-89 %), ocupación media **75 %**, mapa **mezclado** (`= - #` a lo largo). Ninguna hoja al 100 %: las divisiones parten las hojas por la mitad y quedan a medias.
+> - **90/10 (`IX_CRECIENTE`)**: histograma **concentrado** en 90-99 % (398 hojas), ocupación **99,9 %**, mapa **todo `#`**. Divisiones 90/10 (398 de 398): la hoja derecha se llena y se abre una nueva.
+> - **Patrón cola (`IX_COLA`)**: histograma **bimodal** — 236 hojas al 0-9 % **y** 199 al 90-99 % — mapa **vacío a la izquierda y lleno a la derecha** `[   ...####]`, y `del_lf_rows` alto (75 236, 43 %). Es el sello: se inserta por la derecha y se borra por la izquierda.
+
+> **H1 (tipo examen) · Tabla de eventos con claves crecientes y purga nocturna de >30 días; «evento más antiguo» se ha vuelto lenta. ¿Acción en línea y de menor coste?**
+>
+> **B. `ALTER INDEX ... COALESCE`.** Es el patrón cola (medido: 238 lecturas). El COALESCE **fusiona las hojas vecinas medio vacías** en línea y sin bloqueo, y resuelve el síntoma por **2** lecturas (medido: 238 → 2). El REBUILD (A) también lo arregla pero cuesta espacio doble y mucho redo; el REVERSE (C) no ayuda a las lecturas; `GATHER_INDEX_STATS` (D) solo actualiza el diccionario, no repara las hojas vacías físicas.
+
+> **H2 (tipo examen) · ¿Qué dos afirmaciones sobre un índice REVERSE son correctas? (Elige dos.)**
+>
+> **A y C.** **A**: reduce la contención en la hoja más a la derecha con claves crecientes (dispersa las claves consecutivas). **C**: no puede usarse para un rango (`BETWEEN`) sobre la clave, porque el índice ya no está ordenado por ella — medido: el rango cuesta **878 lecturas** (recorrido completo) frente a **4** del índice normal. **B** es falsa (los rangos son más lentos, no más rápidos), **D** falsa (el CF es una propiedad de la **tabla**), **E** falsa (sigue habiendo divisiones: 511).
+
+> **Reto profesional · Diagnostica sin ver el script (con `grafico-indice.sh` + `INDEX_STATS`) y justifica con dos cifras antes/después.**
+>
+> **Diagnóstico: PATRÓN COLA** (evidencias `07b-patron-cola.script.log` y `07b-grafico-IX_COLA-antes.script.log`).
+> - **Por el gráfico**: el mapa está **vacío a la izquierda y lleno a la derecha** `[   ...####]`, con el histograma **bimodal** (236 hojas al 0-9 % + 199 al 90-99 %). Ese es el sello de la cola; no es un 50/50 sano (histograma repartido) ni un 90/10 (todo al 100 %).
+> - **Por `INDEX_STATS`**: **437 hojas** pero **75 236 borradas (43 %)** y 236 **vacías**; ocupación viva 45,8 % mientras el segmento está al 80 %.
+> - **Síntoma que lo confirma**: «dame el siguiente mensaje» (clave más baja) = **238 lecturas** para **1 fila**.
+>
+> **Remedio y dos cifras antes/después**: `COALESCE` (en línea, el más barato). **Lecturas del siguiente mensaje: 238 → 2. Hojas: 437 → 201.** (`SHRINK SPACE` haría lo mismo y además devolvería el espacio: 4 → 1,69 MB; el REBUILD es desproporcionado aquí.)

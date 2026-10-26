@@ -1,0 +1,27 @@
+
+===== Remedios para el patrón cola, medidos =====
+
+PASO                                    HOJAS   BORRADAS MB_SEGMENTO LECTURAS_SIGUIENTE_MENSAJE
+---------------------------------- ---------- ---------- ----------- --------------------------
+0. cola degradada                         437      75253           4                        238
+1. tras COALESCE                          201          0           4                          2
+2. tras SHRINK SPACE                      201          0        1.69                          2
+3. tras REBUILD ONLINE                    223          0           2                          2
+
+(Ojo: DBA_INDEXES.LEAF_BLOCKS, que rellena DBMS_STATS, no cuenta las hojas VACÍAS: para verlas hace falta VALIDATE STRUCTURE o el gráfico)
+COALESCE        fusiona hojas vecinas medio vacías dentro del índice. En línea, sin bloqueo. NO devuelve espacio al tablespace.
+SHRINK SPACE    COALESCE + devuelve los bloques sobrantes al tablespace (baja la marca de agua). En línea.
+REBUILD ONLINE  construye un índice nuevo leyendo el viejo y lo cambia al final. Necesita espacio doble y genera mucho redo.
+Regla profesional: medir antes (gráfico o INDEX_STATS); COALESCE para la cola, REBUILD solo con una causa concreta y medida.
+Y la cura de verdad del patrón cola es de DISEÑO: particionar por fecha y vaciar particiones enteras (DROP/TRUNCATE PARTITION).
+
+Session altered.
+
+
+User dropped.
+
+
+LIMPIEZA
+---------------------------------------
+Esquema de pruebas LAB5_PRUEBAS borrado
+
