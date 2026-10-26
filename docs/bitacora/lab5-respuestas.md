@@ -527,3 +527,38 @@ Cuatro fallos reales, de menos a más grave. Medí **RTO y RPO** en cada uno.
 > **Del punto de control: los 15 cambios de log de la hora 21 y el bloque 7 vacío.**
 > - **15 cambios/hora** con grupos de **200 MB** = ~3 GB de redo en la hora punta: los provocaron **los experimentos de las Partes B–H** (índices, cola de 600k filas). En **producción**, decenas de cambios/hora indicarían **redo dimensionado a la baja** o una **carga masiva** a investigar (Parte K); no es preocupante aquí porque es el pico deliberado del laboratorio, no una carga continua.
 > - **Si el bloque 7 (RMAN) saliera vacío en producción**: **actuaría hoy mismo**. Sin copia de RMAN la base **no se puede recuperar de un fallo de medios** (simulacro D sería imposible): configuraría de inmediato un backup RMAN (`BACKUP DATABASE` + `CONFIGURE CONTROLFILE AUTOBACKUP ON`) y su retención. **Vacío no es un dato, es una alarma.**
+
+## Parte Q — Respuestas, control de seguridad y Pull Request
+
+El trabajo se cierra como en un equipo real: el **Issue #5** dice qué se iba a hacer, **un commit por Parte** cuenta cómo, y el **PR** reúne la prueba (verificación `16` = **TODO OK** y evidencias 00–16). El bloque siguiente recoge el **simulacro de examen 1Z0-182** (S1–S26), con la letra y la Parte donde lo comprobé con mis propias manos. La **tabla RTO/RPO de los cuatro simulacros y la retrospectiva** están en la Parte O.
+
+### Simulacro de examen 1Z0-182 (S1–S26)
+
+| # | Resp. | Justificación (y Parte donde lo medí) |
+|---|---|---|
+| **S1** | **B** | CF ≈ nº de filas = filas dispersas: un rango del índice toca casi un bloque distinto por fila. Rebuild/COALESCE no lo arreglan (CF es de la **tabla**) — **Parte E**. |
+| **S2** | **A y C** | `UPPER(email)` no es sargable: o índice **basado en función** sobre `UPPER(email)` (A), o aplicar la función al **dato** (`email = LOWER(:e)`) si está en minúsculas (C) — **Partes D y F**. Reconstruir (B) y estadísticas (D) no ayudan; `FULL` (E) empeora. |
+| **S3** | **B** | Conversión **implícita**: `codigo_postal = 30001` (número) convierte la **columna** con `TO_NUMBER`, y el índice está sobre la columna sin convertir — **Parte F** (sargabilidad). |
+| **S4** | **B** | **Bitmap**: pocos valores (4) + carga nocturna + consulta de día (solo lectura). Nunca con DML concurrente ni clave alta — **Parte D** (medido 4073→528 lecturas). |
+| **S5** | **B** | Líder (`pais`, 5 valores) sin filtrar → el optimizador puede hacer **INDEX SKIP SCAN** — **Partes D y F**. |
+| **S6** | **B** | `ALTER INDEX … INVISIBLE` y vigilar: optimizador lo ignora, Oracle **lo sigue manteniendo** y hay marcha atrás instantánea — **Parte G** (IX_PED_IMPORTE medido). |
+| **S7** | **A y C** | Patrón cola: **COALESCE** (en línea, 238→2 lecturas) o **SHRINK SPACE** (en línea, además devuelve espacio) — **Parte H**. `REBUILD` sin `ONLINE` bloquea; estadísticas no arreglan hojas vacías. |
+| **S8** | **B** | REVERSE reparte las inserciones (0 divisiones 90/10) pero **impide los rangos** (medido: rango 878 lecturas = recorrido completo) — **Parte H**. |
+| **S9** | **C** | `UPDATE` de una columna **que no está en ningún índice** no mantiene índices; INSERT/DELETE/MERGE sí tocan todos — **Partes G y M**. |
+| **S10** | **B** | La **altura** la determina el **factor de ramificación** (fan-out), que depende del tamaño de la clave — **Parte C** (altura 2/3 medida). |
+| **S11** | **A y C** | IOT: las filas viven en el **propio índice** de la PK (A) y la búsqueda por PK **evita** el segmento de tabla aparte (C) — **Parte D**. Puede tener índices secundarios (B falso), necesita PK (D falso), no tiene ROWID físico fijo (E falso). |
+| **S12** | **B** | Compara el **SCN de checkpoint del control file** con el de la **cabecera del datafile** (`v$datafile` vs `v$datafile_header`) — **Parte I** (medido «sincronizado»). |
+| **S13** | **C** | **CKPT** registra el checkpoint en el control file y las cabeceras; DBWn escribe los bloques de datos — **Parte I**. |
+| **S14** | **B y E** | En **NOMOUNT** solo existen los archivos de parámetros e instancia: `v$instance` (B) y `v$parameter` (E) responden; `v$database`/`v$logfile` necesitan el control file y `dba_users` los datafiles — **Lab 4, Parte E**. |
+| **S15** | **B** | `SHUTDOWN IMMEDIATE → STARTUP MOUNT → ALTER DATABASE ARCHIVELOG → OPEN`: el modo vive en el control file y necesita la base **montada** — **Parte L** (medido). |
+| **S16** | **B** | Un grupo `INACTIVE` y **archivado** es seguro: `ALTER DATABASE CLEAR LOGFILE GROUP n` lo recrea. No hace falta restaurar la base (A) ni recuperación (C) — **Parte K**. |
+| **S17** | **A y C** | Además de ROLLBACK, el undo sirve para **lectura consistente** (A) y **flashback** (`AS OF`) (C) — **Parte M** (medido con las dos sesiones). |
+| **S18** | **B** | El undo vive en bloques del buffer cache que pueden perderse: hay que poder **rehacer** el undo (con redo) antes de poder **deshacer** — **Parte M** (ROLLBACK del DELETE generó 4732 KB de redo). |
+| **S19** | **A** | «Commit complete» = el **redo** de la transacción está en el **redo log online** (LGWR), no los datafiles — **Parte N** (medido: LGWR +7, DBWn 0). |
+| **S20** | **A** | Bajar `FAST_START_MTTR_TARGET` fuerza **checkpoints incrementales más frecuentes** → menos redo pendiente y recuperación más rápida — **Parte I** (reto MTTR). |
+| **S21** | **B** | «log file switch (archiving needed)» = **ARCn no puede archivar** (p. ej. FRA llena) y LGWR no puede reutilizar el grupo — **Parte L** (ORA-19809/16038 medidos). |
+| **S22** | **B** | Para **mantener el resto del servicio**, lo primero es aislar el archivo: `ALTER DATABASE DATAFILE n OFFLINE` (base en ARCHIVELOG) — **Parte O**, simulacro D / runbook. |
+| **S23** | **B** | SYSTEM no puede ponerse `OFFLINE` con la base abierta: `SHUTDOWN ABORT → STARTUP MOUNT → RESTORE DATAFILE → RECOVER DATAFILE → OPEN` — **Parte O** (teoría del simulacro D). |
+| **S24** | **B** | En **NOARCHIVELOG** solo hay copia en frío y se pierde todo lo posterior: sin redo archivado no hay `RECOVER` — **Parte O**. |
+| **S25** | **B y D** | ORA-01555: subir `UNDO_RETENTION` + tamaño del undo (B) y `RETENTION GUARANTEE` si es crítico (D) — **Parte M**. Redo logs (A), NOARCHIVELOG (C) y `LOG_BUFFER` (E) no tienen relación. |
+| **S26** | **A** | **`V$RECOVERY_AREA_USAGE`** muestra el uso de la FRA por tipo de archivo (`file_type`, `percent_space_used`) — **Parte L** (medido). |
