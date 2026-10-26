@@ -431,3 +431,24 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 >
 > Anoté `v$recovery_file_dest.space_used` = **346,9 MB**, ejecuté `12-undo-y-redo.sql` otra vez y forcé `ALTER SYSTEM ARCHIVE LOG CURRENT` (`12-reto-fra-delete.script.log`). La FRA pasó a **493,2 MB**: **creció 146,3 MB** (un solo `.arc`).
 > El redo que generó el script (delta de `v$sysstat 'redo size'`) fue **17,4 MB** (452426 → 470236 KB): DML 11,6 MB + rollbacks 5,7 MB. **La FRA creció mucho más (146,3 MB) que el redo del script (17,4 MB)** porque el archivo archivado no es «lo que hizo el script» sino **todo el redo acumulado en el grupo actual desde el último archivado** —actividad interna, el trabajo previo de las Partes L y M— en cuanto forcé el cambio de log. Un `.arc` = el contenido de un grupo completo, no una transacción.
+
+## Parte N — LGWR, DBWn y write-ahead logging
+
+**La regla del registro previo a la escritura** (`13-lgwr-dbwn.script.log`), midiendo `v$sysstat` y `v$bh` desde `CDB$ROOT`:
+| Paso | Redo (KB) | Escrituras LGWR | Commits | Bloques DBWn | Bloques sucios (tabla) |
+|---|---|---|---|---|---|
+| 0. Punto de partida | — | — | — | — | 0 |
+| 1. UPDATE 20 000 filas + COMMIT | **+8161** | **+7** | +1 | **0** | **231** |
+| 2. `ALTER SYSTEM CHECKPOINT` | +14 | +1 | 0 | **+614** | **0** |
+
+El COMMIT movió **redo con LGWR** y dejó los **231 bloques sucios en memoria** (DBWn no escribió nada); el CHECKPOINT fue lo que **DBWn** usó para volcar **614 bloques** (los 231 de la tabla + undo + otros de la instancia) a los datafiles. Es más rápido escribir ~8 MB secuenciales en el redo que cientos de bloques dispersos.
+
+> **P19 · Con tu evidencia 13: ¿dónde está la garantía de durabilidad justo después del COMMIT? ¿Y después del checkpoint?**
+> - **Justo después del COMMIT**: en el **redo del online redo log escrito por LGWR**. Medido: paso 1 con **+8161 KB** de redo y **+7 escrituras de LGWR**, pero **0 bloques de DBWn** y la tabla aún con **231 bloques sucios**. Los datos NO están en los datafiles; la garantía es que el cambio quedó **descrito en el redo en disco**, de modo que si cae la instancia se rehace («log file sync»).
+> - **Después del CHECKPOINT**: en los **datafiles**, hasta el SCN del checkpoint. Medido: paso 2 con **+614 bloques escritos por DBWn** y sucios a **0**. Ahora los bloques ya están físicamente en disco y el control file apunta ese SCN; la recuperación solo necesita rehacer el redo generado **después** de ese checkpoint.
+
+> **N1 (tipo examen) · Una sesión recibe «Commit complete». ¿Qué está garantizado en ese momento?**
+> **A. El redo de la transacción está escrito en el redo log online.** Medido: COMMIT → LGWR +7, redo +8161 KB, **DBWn = 0**. No implica datafiles (B), ni archivado en la FRA (C), ni checkpoint (D).
+
+> **N2 (tipo examen) · ¿En qué dos situaciones escribe DBWn bloques sucios en los datafiles? (Elige dos.)**
+> **B y C.** **B**: en un **checkpoint** (medido: paso 2, DBWn +614). **C**: cuando un proceso servidor **no encuentra buffers libres**. **A** es falsa (el COMMIT escribe redo con LGWR, no datafiles), **D** falsa (cada 3 s escribe **LGWR**, no DBWn) y **E** falsa (LGWR terminar el log buffer no dispara a DBWn). **Nunca «por un COMMIT»**.
