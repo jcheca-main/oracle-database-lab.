@@ -1,0 +1,57 @@
+==== 1. FRA antes ====
+
+ LIMITE_MB   USADO_MB
+---------- ----------
+      4096	  1.9
+==== 2. Encoger la FRA a 2M (solo laboratorio) ====
+==== 3. UPDATE real de 300000 filas (genera ~100MB de redo) ====
+==== 4. Pedir archivar el grupo lleno -> debe fallar (FRA 2M) ====
+ALTER SYSTEM ARCHIVE LOG CURRENT
+*
+ERROR at line 1:
+ORA-16014: Log 2 sequence# 20 could not be archived successfully, there are no destinations available.
+ORA-00312: online log 2 thread 1: '/opt/oracle/oradata/FREE/redo02.log'
+ORA-00312: online log 2 thread 1: '/opt/oracle/oradata/FREE/redo02b.log'
+Help: https://docs.oracle.com/error-help/db/ora-16014/
+
+
+==== 5. Sintoma: grupos con ARC=NO y eventos de espera ====
+
+    GROUP#  SEQUENCE# ARC STATUS
+---------- ---------- --- ----------------
+	 1	   19 YES ACTIVE
+	 2	   20 NO  ACTIVE
+	 3	   21 NO  CURRENT
+
+EVENT								   COUNT(*)
+---------------------------------------------------------------- ----------
+Allocate CGA memory from OS						  1
+==== 6. Alert log: ORA-19815 / ORA-19809 / ORA-16038 ====
+
+HORA
+--------
+MSG
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+21:58:44
+ORA-19815: WARNING: db_recovery_file_dest_size of 2097152 bytes is 93.70% used, and has 132096 remaining bytes
+
+21:58:47
+ORA-19815: WARNING: db_recovery_file_dest_size of 2097152 bytes is 100.00% used, and has 0 remaining bytes ava
+
+21:58:47
+ORA-19809: limit exceeded for recovery files
+
+21:58:47
+ORA-16038: log 2 sequence# 20 cannot be archived
+
+==== 7. Remedio: devolver espacio; ARCn reintenta solo ====
+
+    GROUP#  SEQUENCE# ARC STATUS
+---------- ---------- --- ----------------
+	 1	   22 NO  CURRENT
+	 2	   20 YES ACTIVE
+	 3	   21 YES ACTIVE
+
+ LIMITE_MB   USADO_MB
+---------- ----------
+      4096	328.9

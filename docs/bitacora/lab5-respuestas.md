@@ -367,3 +367,26 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 > ALTER DATABASE DROP LOGFILE GROUP 3;
 > ```
 > **Trampa evitada**: no se puede redimensionar un grupo existente (hay que añadir grupos nuevos y borrar los viejos), y no se borra un grupo `ACTIVE` ni `CURRENT`.
+
+## Parte L — ARCHIVELOG y Fast Recovery Area
+
+**Activar la FRA y el modo** (`11-activar-archivelog.script.log`): mi base **ya estaba en ARCHIVELOG** (heredado del Lab 4), así que no hizo falta reiniciar. La FRA sí era nueva. El orden obligatorio: primero `db_recovery_file_dest_size` (4 GB) y después `db_recovery_file_dest` (dentro del volumen). El paso 2 lo comprueba a propósito: fijar la ruta **sin tamaño** da **ORA-02097 / ORA-19802** (`cannot use DB_RECOVERY_FILE_DEST without DB_RECOVERY_FILE_DEST_SIZE`). Verificación: `Archive Mode`, `Automatic archival Enabled`, destino `USE_DB_RECOVERY_FILE_DEST`, procesos **ARC0–ARC3** (en el Lab 4 no existían: solo aparecen con ARCHIVELOG) y `.arc` OMF (`o1_mf_…`) en `fra/FREE/archivelog/2026_10_26/`.
+
+**Escenario de FRA llena** (`11-reto-fra-llena.script.log`): el script oficial con `SET estado = estado` (sin cambio real) no desbordó los 2 MB, así que lo provoqué de verdad con un **UPDATE real de 300 000 filas** (~100 MB de redo) y FRA a 2 MB. Cadena medida: **ORA-19815** (93,70 % → **100,00 %** usada, 0 restante) → **ORA-19809** (`limit exceeded for recovery files`) → **ORA-16038** (`log 2 sequence# 20 cannot be archived`) y **ORA-16014** (`no destinations available`) → el grupo queda **`ARC = NO`**. Remedios de más rápido a más correcto: (1) subir `db_recovery_file_dest_size` (lo hice → **ARCn reintenta solo** y los grupos 20 y 21 pasaron a archivarse, FRA a 328,9 MB); (2) RMAN `BACKUP ARCHIVELOG ALL DELETE INPUT` / `DELETE OBSOLETE`; (3) política de retención + alerta al 80 %. **Nunca `rm`**: Oracle no se entera y deja FRA y control file desincronizados.
+
+> **P16 · Describe la cadena de causas del escenario de la FRA llena, desde ORA-19815 hasta que la base deja de aceptar cambios.**
+>
+> 1. La FRA alcanza su límite (`db_recovery_file_dest_size`); Oracle avisa **ORA-19815** — medido: 93,70 % y después **100,00 %** con 0 bytes restantes.
+> 2. ARCn no puede escribir el redo archivado → **ORA-19809** (`limit exceeded for recovery files`).
+> 3. El cambio de log no puede archivarse: **ORA-16038** (`log 2 sequence# 20 cannot be archived`) / **ORA-16014** (`no destinations available`); el grupo se queda **`ARC = NO`**.
+> 4. En ARCHIVELOG, LGWR **no puede reutilizar** un grupo que no esté archivado, así que no puede seguir escribiendo.
+> 5. Toda sesión que genere redo se queda **esperando** en `log file switch (archiving needed)` —**no da error, espera**—; las conexiones nuevas acaban recibiendo **ORA-00257**.
+> 6. Resultado: **la base deja de aceptar cambios** que generan redo (DML/DDL). Remedios: subir el tamaño (ARCn reintenta **solo**, medido), o RMAN `DELETE INPUT`/`DELETE OBSOLETE`; nunca `rm`.
+
+> **L1 (tipo examen) · `ALTER SYSTEM SET db_recovery_file_dest = '/u03/fra'` en una base sin FRA configurada da error. ¿Causa?**
+>
+> **B. Falta fijar antes `DB_RECOVERY_FILE_DEST_SIZE`.** Medido: **ORA-02097 / ORA-19802** — el tamaño es obligatorio y va **primero**. **A** es falsa (no hace falta ARCHIVELOG para tener FRA), **C** falsa (no es estático: lo fijé con `SCOPE=BOTH` sin reiniciar) y **D** falsa (no exige ASM).
+
+> **L2 (tipo examen) · Sesiones esperando en «log file switch (archiving needed)» y conexiones nuevas con ORA-00257. ¿Qué dos acciones lo resuelven? (Elige dos.)**
+>
+> **A y C.** **A**: aumentar `DB_RECOVERY_FILE_DEST_SIZE` si hay disco — medido: al devolver a 4 GB, ARCn reintentó y archivó solo. **C**: copiar los archivados con RMAN y borrarlos con `DELETE INPUT` (libera espacio sin romper el control file). **B** es falsa (más `SWITCH LOGFILE` empeora), **D** falsa (NOARCHIVELOG en caliente no se puede y no arregla el archivado pendiente) y **E** falsa (`rm` deja la FRA y el control file desincronizados; hay que hacerlo con RMAN).

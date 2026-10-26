@@ -1,0 +1,30 @@
+
+===== 1. Espacio de la FRA ahora =====
+
+NAME				LIMITE_MB   USADO_MB
+------------------------------ ---------- ----------
+/opt/oracle/oradata/fra 	     4096	  .1
+
+===== 2. Encoger la FRA por debajo de lo necesario (solo laboratorio) =====
+
+===== 3. Generar redo (UPDATE sin cambio real de 20 000 filas) y pedir que se archive =====
+
+===== 4. Lo que verá el DBA de guardia: grupos sin archivar y el alert log =====
+
+    GROUP#  SEQUENCE# ARC STATUS
+---------- ---------- --- ----------------
+	 1	   19 NO  CURRENT
+	 2	   17 YES INACTIVE
+	 3	   18 YES ACTIVE
+
+===== 5. Solución inmediata: devolver espacio a la FRA. ARCn reintenta solo =====
+
+    GROUP#  SEQUENCE# ARC STATUS
+---------- ---------- --- ----------------
+	 1	   19 YES ACTIVE
+	 2	   20 NO  CURRENT
+	 3	   18 YES ACTIVE
+
+NAME				LIMITE_MB   USADO_MB
+------------------------------ ---------- ----------
+/opt/oracle/oradata/fra 	     4096	 1.9
