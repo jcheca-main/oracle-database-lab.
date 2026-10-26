@@ -1,0 +1,42 @@
+Copia sana que se usará para reparar: /opt/oracle/oradata/FREE/control01.ctl
+== 1. Parada limpia y 'desastre': se borra /opt/oracle/oradata/FREE/control03.ctl ==
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+== 2. Arranque: falla al MONTAR (ORA-00205 esperado) ==
+ORACLE instance started.
+
+Total System Global Area 1603398928 bytes
+Fixed Size		    5033232 bytes
+Variable Size		  503316480 bytes
+Database Buffers	 1090519040 bytes
+Redo Buffers		    4530176 bytes
+ORA-00205: error in identifying control file, check alert log for more info
+Help: https://docs.oracle.com/error-help/db/ora-00205/
+
+
+
+STATUS
+------------
+STARTED
+
+== 3. Diagnóstico: el alert log dice QUÉ archivo falta ==
+ORA-00202: control file: '/opt/oracle/oradata/FREE/control03.ctl'
+ORA-27037: unable to obtain file status
+ORA-00202: control file: '/opt/oracle/oradata/FREE/control03.ctl'
+ORA-27037: unable to obtain file status
+== 4. Reparación: copiar una copia sana y continuar el arranque desde NOMOUNT ==
+
+Database altered.
+
+
+Database altered.
+
+
+NAME						 STATUS
+------------------------------------------------ -------
+/opt/oracle/oradata/FREE/control01.ctl
+/opt/oracle/oradata/FREE/control02.ctl
+/opt/oracle/oradata/FREE/control03.ctl
+
+  t=0s  docker=healthy  cdb/pdb=READWRITE/READWRITE

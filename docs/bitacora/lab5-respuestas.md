@@ -452,3 +452,47 @@ El COMMIT movió **redo con LGWR** y dejó los **231 bloques sucios en memoria**
 
 > **N2 (tipo examen) · ¿En qué dos situaciones escribe DBWn bloques sucios en los datafiles? (Elige dos.)**
 > **B y C.** **B**: en un **checkpoint** (medido: paso 2, DBWn +614). **C**: cuando un proceso servidor **no encuentra buffers libres**. **A** es falsa (el COMMIT escribe redo con LGWR, no datafiles), **D** falsa (cada 3 s escribe **LGWR**, no DBWn) y **E** falsa (LGWR terminar el log buffer no dispara a DBWn). **Nunca «por un COMMIT»**.
+
+## Parte O — Simulacros de fallo (game day)
+
+Cuatro fallos reales, de menos a más grave. Medí **RTO y RPO** en cada uno.
+
+**A · Caída de instancia** (`14a-caida-instancia.script.log`): `SHUTDOWN ABORT` tras dejar 102 `EGRESADO` (confirmado) e 103 `INACTIVO` (sin confirmar). Al `STARTUP`, SMON recuperó solo: alert log `Beginning crash recovery` → `Recovery starting at checkpoint rba (logseq 23 block 20553), scn 5375583` → `read 76 KB redo, 84 data blocks need recovery` → `Completed crash recovery` → `opened at log sequence 24`. Resultado: **102 = EGRESADO** (durabilidad), **103 = ACTIVO** (atomicidad). **RTO = arranque automático (segundos); RPO = 0.**
+
+**B · Pérdida de una copia del control file** (`14b-perdida-controlfile.script.log`): con la base parada borré `control03.ctl`. El arranque se detuvo en **NOMOUNT** con **ORA-00205** (`STATUS STARTED`); el alert log dice `ORA-00202: control file: .../control03.ctl` + `ORA-27037`. Reparación = `cp -p control01.ctl control03.ctl` + `MOUNT` + `OPEN`. **RTO = minutos; RPO = 0.**
+
+**C · Borrado de una tabla** (`14c-simulacro-restauracion.script.log`): `DROP` sin `PURGE` → papelera (`BIN$…`) → `FLASHBACK TABLE … TO BEFORE DROP` lo devuelve en segundos. `DROP … PURGE` → `ORA-00942` (sin papelera) → restauré la copia `lab5-pre-simulacro` (**1.5 G**). **RTO = 83 s; RPO = 2 s** (todo lo hecho entre copia y fallo).
+
+**D · Pérdida de un datafile** (`14d-perdida-datafile.script.log`): copia RMAN de `TBS_ACADEMIA`, cambio confirmado **después** (104 → `EGRESADO`), `rm` del datafile 16 → **ORA-01116 / ORA-01110 / ORA-27041**. Oracle **cerró la PDB** (camino `ORA-63999`, PDB `MOUNTED`); `RESTORE DATAFILE 16` + `RECOVER DATAFILE 16` → `media recovery complete`; `ALTER PLUGGABLE DATABASE FREEPDB1 OPEN` → `READ WRITE`. **104 = EGRESADO** (el RECOVER aplicó el redo posterior a la copia). **RTO = 11 s; RPO = 0.**
+
+> **P20 · Simulacro A: explica roll forward y roll back con las filas 102 y 103 y las líneas del alert log.**
+> - **Roll forward (rehacer)**: SMON lee el redo desde el último checkpoint —`Recovery starting at checkpoint rba (logseq 23 block 20553), scn 5375583`— y rehace los bloques que no llegaron al disco —`read 76 KB redo, 84 data blocks need recovery`, `Started/Completed redo application`. El redo **rehace lo confirmado y lo no confirmado por igual** (no distingue): reconstruye 102 y 103 tal como estaban al cortar.
+> - **Roll back (deshacer)**: con ese undo, SMON **deshace la transacción no confirmada** (103). Resultado medido: **102 = EGRESADO** (durabilidad: lo confirmado sobrevive) y **103 = ACTIVO** (atomicidad: lo no confirmado se borra). Nadie intervino: un `STARTUP` normal basta —`Completed crash recovery`, `opened at log sequence 24`.
+
+> **P21 · Simulacros C y D: tu RTO y tu RPO en cada uno. ¿Por qué son tan distintos?**
+> - **C** (restauración completa por una tabla): **RTO = 83 s**, **RPO = 2 s**.
+> - **D** (restaurar un archivo con RMAN + redo): **RTO = 11 s**, **RPO = 0**.
+> - **Por qué tan distintos**: C restaura **toda la base (1.5 G)** desde una copia en frío —el RTO crece con el **tamaño de la base**, no con el del daño (restauré 1.5 G por **una** tabla)— y su RPO es el tiempo desde la última copia (pierdes todo lo posterior). D restaura **un solo archivo** y el `RECOVER` **rehace el redo archivado y en línea** desde la copia hasta el fallo: RTO mínimo y **RPO = 0** porque ARCHIVELOG garantiza no perder ningún COMMIT. La lección: a mayor disponibilidad necesaria, más ARCHIVELOG y RMAN, menos «copias en frío».
+
+> **O1 (tipo examen) · Tras un corte de luz, el DBA ejecuta `STARTUP`. ¿Qué ocurre?**
+> **B. SMON aplica el redo online y deshace las transacciones no confirmadas; la base abre sin intervención.** Medido en el simulacro A. No hay que hacer `RECOVER DATABASE` manual (A), ni restaurar datafiles (C), y **no** se pierde nada confirmado (D).
+
+> **O2 (tipo examen) · Tres copias del control file; una se borra con la base cerrada y `STARTUP` da ORA-00205. ¿Qué dos acciones abren la base sin perder datos? (Elige dos.)**
+> **B y D.** **B**: copiar una copia sana sobre la perdida y montar (medido en el simulacro B). **D**: quitar la copia perdida de `CONTROL_FILES` en el SPFILE, reiniciar y montar. **A** es falsa (`RECOVER DATABASE USING BACKUP CONTROLFILE` es para cuando no queda ninguna copia y exige recuperación + `RESETLOGS`), **C** falsa (`RESETLOGS` puede perder datos y aquí no hace falta) y **E** falsa (los datafiles están sanos; restaurarlos es desproporcionado).
+
+> **O3 (tipo examen) · En ARCHIVELOG se pierde el datafile de un tablespace de aplicación. ¿Secuencia que lo recupera sin cerrar la base y sin perder datos?**
+> **B. `ALTER DATABASE DATAFILE n OFFLINE; RESTORE DATAFILE n; RECOVER DATAFILE n; ALTER DATABASE DATAFILE n ONLINE;`** Es el camino A del simulacro D. **A** cierra la base y usa `RESETLOGS`; **C** omite el `OFFLINE` y el `RECOVER`; **D** (`FLASHBACK DATABASE`) no sirve para un fallo de medios.
+
+> **O4 (tipo examen) · `DROP TABLE ventas PURGE` hace 10 min; ARCHIVELOG + RMAN. ¿Qué recupera la tabla sin perder cambios de otras tablas?**
+> **D. `RMAN RECOVER TABLE` hasta un instante anterior al DROP.** Recupera **solo esa tabla** a un punto en el tiempo con la copia de RMAN + redo archivado; el resto de tablas conservan sus cambios. **A** no sirve (`PURGE` la sacó de la papelera), **B** restauraría toda la base y **perdería** los cambios de otras tablas, **C** es solo una consulta (no recupera la tabla).
+
+> **Reto profesional · El runbook del simulacro D.**
+> Redactado en **`docs/runbooks/perdida-datafile.md`** (una página): los tres ORA- del síntoma (más el ORA-63999), comprobaciones previas (`ARCHIVELOG`, copia con `LIST BACKUP OF DATAFILE n`, estado de la PDB en `v$pdbs`), los **dos caminos** (PDB `READ WRITE` → `OFFLINE`/`RESTORE`/`RECOVER`/`ONLINE`; PDB `MOUNTED` → esperar, `RESTORE`/`RECOVER`, `ALTER PLUGGABLE DATABASE … OPEN`), la verificación (`v$pdbs` = `READ WRITE` + fila de control) y a quién avisar (escalada si es SYSTEM/undo de la raíz o si no hay ARCHIVELOG/copia).
+
+> **Retrospectiva SRE (RTO/RPO de los cuatro, sorpresa y mejora).**
+> | Simulacro | RTO | RPO | Sorpresa | Qué cambiaría |
+> |---|---|---|---|---|
+> | A · caída | automático (s) | 0 | Solo hizo falta **76 KB de redo / 84 bloques**: la caída cayó justo tras un checkpoint | Nada: es automático; usar `SHUTDOWN IMMEDIATE` para copias en frío |
+> | B · control file | minutos | 0 | Se para en **MOUNT** y la reparación es un `cp` | Mis 3 copias están en el **mismo volumen**: un desastre real se las lleva a las tres → repartir discos |
+> | C · tabla borrada | **83 s** | 2 s | El RTO crece con el **tamaño de la base** (1.5 G por **una** tabla) | Para una tabla usar `RMAN RECOVER TABLE`, no restauración completa |
+> | D · datafile | **11 s** | 0 | Oracle **cerró la PDB entera** (ORA-63999) antes de que yo pudiera ponerlo `OFFLINE` | Vigilar ORA-63999; el runbook ya cubre los dos caminos |
