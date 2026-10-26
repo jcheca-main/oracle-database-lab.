@@ -496,3 +496,34 @@ Cuatro fallos reales, de menos a más grave. Medí **RTO y RPO** en cada uno.
 > | B · control file | minutos | 0 | Se para en **MOUNT** y la reparación es un `cp` | Mis 3 copias están en el **mismo volumen**: un desastre real se las lleva a las tres → repartir discos |
 > | C · tabla borrada | **83 s** | 2 s | El RTO crece con el **tamaño de la base** (1.5 G por **una** tabla) | Para una tabla usar `RMAN RECOVER TABLE`, no restauración completa |
 > | D · datafile | **11 s** | 0 | Oracle **cerró la PDB entera** (ORA-63999) antes de que yo pudiera ponerlo `OFFLINE` | Vigilar ORA-63999; el runbook ya cubre los dos caminos |
+
+## Parte P — Runbook de salud y verificación final
+
+**`15-healthcheck.sql`** (con `C##OPS_RO`, solo lectura; `15-healthcheck.spool.log`): 9 secciones que un SRE revisa cada mañana en un minuto. Medido hoy: **disponibilidad** OPEN / READ WRITE · ARCHIVELOG / FREEPDB1 READ WRITE; **espacio** sin tablespaces >80 %; **recuperabilidad** FRA **546/4096 MB (13,3 %)**, último archivado 22:18, **3** copias de control file, **0** grupos con un solo miembro; **capacidad** processes 101/200, sessions 131/322; **cambios de log** 21h = **15**; **RMAN** 1 copia COMPLETED (38 MB); **índices** solo «sin estadísticas» en esquemas vacíos; **undo** 0 ORA-01555.
+
+**`16-verificacion-final.sh`** (`16-verificacion-final.script.log`): **RESULTADO: TODO OK**. Comprueba backup íntegro, TiendaSur 100000/1000000, los 5 índices exactos de PEDIDO tras V005, DNI único, FRA 4 G en SPFILE, filas 101/102/104 de vuelta a ACTIVO, 60000 matrículas, copias RMAN y las 16 evidencias.
+
+> **P22 · Clasifica cada error ORA- del bloque 5 de tu runbook: incidente real, efecto del laboratorio o ruido conocido. ¿Qué Parte lo explica?**
+>
+> De mi bloque 5 (`15-healthcheck.spool.log`), **ninguno es un incidente real**:
+> - **ORA-63999** (`data file suffered media failure`), **ORA-01113** (`file 26 needs media recovery`) y **ORA-01110** (`data file 16: .../academia01.dbf`): **efecto del laboratorio — Parte O, simulacro D**. Son la huella de la pérdida de datafile que provoqué: al reabrir la PDB, Oracle revisó las cabeceras y marcó los archivos no al día; se recuperaron y la verificación final da TODO OK.
+> - **ORA-00202** (`control file: control03.ctl`) y **ORA-205** (`signalled during ALTER DATABASE MOUNT`): **efecto del laboratorio — Parte O, simulacro B** (borré `control03.ctl` a propósito).
+> - **ORA-00800** (`soft external error … Set Priority Failed`, LGWR/VKTM): **ruido conocido del entorno** (ya clasificado en el **Lab 4**: Docker no puede fijar prioridad de proceso; inofensivo).
+>
+> **Lección**: el bloque 5 no se «limpia», se **clasifica**. Cada ORA se anota como incidente real / efecto del laboratorio / ruido, y solo un incidente real escala.
+
+> **Reto profesional · Un umbral que dispare una alerta (sección 3 · FRA).**
+>
+> La consulta que devuelve **una sola fila solo cuando hay que despertar a alguien** (vacío = bien):
+> ```sql
+> -- FRA por encima del 85 %: actúa de día (Parte L); al 100 % la base deja de archivar y se detiene
+> SELECT 'FRA CRITICA: ' || ROUND(100 * space_used / NULLIF(space_limit, 0), 1) || '% (' ||
+>        ROUND(space_used / 1048576) || ' de ' || ROUND(space_limit / 1048576) || ' MB)'
+> FROM v$recovery_file_dest
+> WHERE 100 * space_used / NULLIF(space_limit, 0) > 85;
+> ```
+> (Variante para la sección 7: `SELECT 'SIN COPIA RMAN en 24 h' FROM dual WHERE NOT EXISTS (SELECT 1 FROM v$rman_backup_job_details WHERE status='COMPLETED' AND start_time > SYSTIMESTAMP - INTERVAL '1' DAY);`). Es la conexión entre estas comprobaciones y un sistema de alertas: convierte un incidente nocturno en un aviso diurno.
+
+> **Del punto de control: los 15 cambios de log de la hora 21 y el bloque 7 vacío.**
+> - **15 cambios/hora** con grupos de **200 MB** = ~3 GB de redo en la hora punta: los provocaron **los experimentos de las Partes B–H** (índices, cola de 600k filas). En **producción**, decenas de cambios/hora indicarían **redo dimensionado a la baja** o una **carga masiva** a investigar (Parte K); no es preocupante aquí porque es el pico deliberado del laboratorio, no una carga continua.
+> - **Si el bloque 7 (RMAN) saliera vacío en producción**: **actuaría hoy mismo**. Sin copia de RMAN la base **no se puede recuperar de un fallo de medios** (simulacro D sería imposible): configuraría de inmediato un backup RMAN (`BACKUP DATABASE` + `CONFIGURE CONTROLFILE AUTOBACKUP ON`) y su retención. **Vacío no es un dato, es una alarma.**

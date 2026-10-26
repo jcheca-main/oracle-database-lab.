@@ -1,0 +1,46 @@
+== Parte A · Respaldo del Lab 4 ==
+  [OK]    backup backups/20261026T203457Z_lab4-final íntegro
+== Partes B a H · Banco TiendaSur e índices ==
+  [OK]    TiendaSur: clientes/pedidos (100000/1000000)
+  [OK]    banco de medida LAB_TOOLS.MEDIR (VALID)
+  [OK]    índices de PEDIDO tras V005 (IX_PED_CLI_FEC_CUB,IX_PED_CP,IX_PED_FECHA,IX_PED_PENDIENTES,PK_PEDIDO)
+  [OK]    DNI único garantizado por la base (1)
+  [OK]    índices invisibles olvidados (0)
+  [OK]    esquema de pruebas LAB5_PRUEBAS borrado (0)
+== Partes I a L · SCN, control files, redo y ARCHIVELOG ==
+  [OK]    copias del control file (3)
+  [OK]    grupos de redo con un solo miembro (0)
+  [OK]    modo de la base (ARCHIVELOG)
+  [OK]    FRA configurada (definida)
+  [OK]    tamaño de la FRA en el SPFILE (no el 2M del escenario) (4294967296)
+  [OK]    hay redo archivado (si)
+== Partes M a P · Undo, simulacros y salud ==
+  [OK]    fila 101 de vuelta a ACTIVO (ACTIVO)
+  [OK]    fila 102 de vuelta a ACTIVO (ACTIVO)
+  [OK]    matrículas restauradas (60000)
+  [OK]    fila 104 de vuelta a ACTIVO (ACTIVO)
+  [OK]    hay copias RMAN completadas (si)
+  [OK]    PDB de usuario (solo FREEPDB1) (1)
+  [OK]    C##OPS_RO lee el alert log (1)
+  [OK]    CDB abierta (READWRITE)
+== Evidencias ==
+  [OK]    evidencia 00
+  [OK]    evidencia 01
+  [OK]    evidencia 02
+  [OK]    evidencia 03
+  [OK]    evidencia 04
+  [OK]    evidencia 05
+  [OK]    evidencia 06
+  [OK]    evidencia 07
+  [OK]    evidencia 08
+  [OK]    evidencia 09
+  [OK]    evidencia 10
+  [OK]    evidencia 11
+  [OK]    evidencia 12
+  [OK]    evidencia 13
+  [OK]    evidencia 14
+  [OK]    evidencia 15
+  [OK]    config/.env fuera de Git
+  [OK]    backups/ fuera de Git
+
+RESULTADO: TODO OK. Lab 5 listo para entregar.
