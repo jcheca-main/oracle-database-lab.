@@ -307,3 +307,21 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 >
 > Con la base en marcha, antes del UPDATE: `estimated_mttr` **26 s**, `actual_redo_blks` **429736**. Hice un `UPDATE` de **20 000 filas** sobre `pedido` (y `COMMIT`, **sin** checkpoint) y volví a medir (`08-reto-mttr.script.log`): `estimated_mttr` **36 s** (+10) y `actual_redo_blks` **436858** (+7122 bloques de redo).
 > **Relación en una frase**: cada bloque de redo pendiente es trabajo que la recuperación de instancia tendrá que **replayar** desde el último checkpoint, así que a más redo pendiente (`actual_redo_blks`) más tiempo estimado de recuperación (`estimated_mttr`); el parámetro que lo acota es **`FAST_START_MTTR_TARGET`** —bajarlo fuerza checkpoints más frecuentes, deja menos redo pendiente y acorta el MTTR a costa de más escritura en datafiles—.
+
+## Parte J — Archivos de control: qué guardan y cómo multiplexarlos
+
+**Qué guarda** (`09-controlfiles-info.script.log`): el control file (~18 MB) es el mapa de la base. `v$controlfile` muestra **2 copias** (`control01.ctl`, `control02.ctl`, STATUS vacío = sana). `v$controlfile_record_section` expone sus secciones internas: `DATAFILE`, `TABLESPACE`, `REDO LOG`/`LOG HISTORY`, `ARCHIVED LOG`, `BACKUP SET` (metadatos de RMAN), etc. `control_file_record_keep_time` = **7** días. Y `ALTER DATABASE BACKUP CONTROLFILE TO TRACE` genera un **`CREATE CONTROLFILE` legible** (`controlfile_lab5.trc`, dentro del volumen) con todos los datafiles y redo logs — la última línea de defensa si se pierden todas las copias.
+
+**Multiplexar** (`09-multiplexar-controlfile.sh`): añadí una **tercera copia** (`control03.ctl`). Procedimiento oficial con SPFILE: (1) `ALTER SYSTEM SET control_files … SCOPE=SPFILE` (CONTROL_FILES es **estático**, el cambio solo se aplica al arrancar), (2) `SHUTDOWN IMMEDIATE`, (3) `cp -p` de una copia sana al nuevo nombre (con la base parada todas son idénticas), (4) `STARTUP`. Idempotente. Al final Oracle mantiene las **tres** copias y la base queda healthy.
+
+> **P14 · ¿Qué protege la multiplexación del control file en el mismo volumen y qué no? ¿Cómo se haría en producción?**
+>
+> La multiplexación son **varias copias idénticas que Oracle escribe a la vez**. **Protege de**: el borrado accidental o la corrupción de **un solo archivo** — si una copia se pierde, las otras dos son idénticas y siguen valiendo (lo comprobaré en el simulacro B). **No protege de**: perder el **disco o el volumen entero** (aquí las tres comparten volumen, así que se van juntas), ni de una corrupción **lógica** del contenido, que se copiaría a las tres. **En producción**: cada copia en un **disco y controladora distintos** (o grupos de ASM con redundancia), más `RMAN … CONFIGURE CONTROLFILE AUTOBACKAP ON` para tener copias del control file de momentos concretos — multiplexar ≠ hacer copias de seguridad.
+
+> **J1 (tipo examen) · Una de las tres copias del control file se corrompe con la base abierta. ¿Qué ocurre?**
+>
+> **B. La instancia se detiene.** Aunque haya otras copias sanas, Oracle **no sigue "con las demás"**: si una copia del control file falla con la base abierta, la instancia se para. Hay que sustituir la copia dañada por una sana (o quitarla de `CONTROL_FILES`) y arrancar. No la recrea solo (C), no sigue sin aviso (A) y no hay por qué restaurar los datafiles (D).
+
+> **J2 (tipo examen) · ¿Qué dos datos guarda el control file? (Elige dos.)**
+>
+> **A y C.** **A**: el nombre y la ubicación de los datafiles y redo logs (los vi en el `CREATE CONTROLFILE` trazado). **C**: el SCN del último checkpoint (lo medí en la Parte I: `v$datafile.checkpoint_change#`). **B** es falso (los parámetros viven en el SPFILE), **D** falso (las contraseñas, en el archivo de contraseñas) y **E** falso (las filas del diccionario están en los datafiles, no en el control file).

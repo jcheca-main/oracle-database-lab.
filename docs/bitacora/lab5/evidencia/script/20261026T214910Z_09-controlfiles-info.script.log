@@ -1,0 +1,31 @@
+
+===== 1. Copias del control file (multiplexación) =====
+
+NAME						 STATUS  BLOCK_SIZE FILE_SIZE_BLKS
+------------------------------------------------ ------- ---------- --------------
+/opt/oracle/oradata/FREE/control01.ctl			      16384	      1146
+/opt/oracle/oradata/FREE/control02.ctl			      16384	      1146
+
+===== 2. Qué registra: secciones con más registros ocupados (v$controlfile_record_section) =====
+
+TYPE			     RECORDS_TOTAL RECORDS_USED
+---------------------------- ------------- ------------
+STANDBY DATABASE MATRIX 	       128	    128
+OFFLINE RANGE			      1063	     57
+DATAFILE			      1024	     26
+FILENAME			      4146	     26
+TABLESPACE			      1024	     23
+LOG HISTORY			       292	     13
+ACM OPERATION				64	     13
+ARCHIVED LOG				28	     13
+THREAD INSTANCE NAME MAPPING		 8	      8
+BACKUP SET			      1022	      6
+
+===== 3. Cuántos días conserva registros reutilizables (p. ej., historial de archivados) =====
+
+NAME						 VALUE
+------------------------------------------------ ------------------------------------------------------------
+control_file_record_keep_time			 7
+
+===== 4. Copia de seguridad LÓGICA del control file: un script CREATE CONTROLFILE legible =====
+Creado /opt/oracle/oradata/FREE/controlfile_lab5.trc (dentro del volumen)

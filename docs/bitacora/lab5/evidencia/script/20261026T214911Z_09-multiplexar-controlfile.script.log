@@ -1,0 +1,32 @@
+control_files actual: /opt/oracle/oradata/FREE/control01.ctl, /opt/oracle/oradata/FREE/control02.ctl
+== 1. Nuevo valor en el SPFILE (no en memoria: control_files es estático) ==
+
+System altered.
+
+== 2. Parada limpia ==
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+== 3. Copia física de una copia sana al nuevo nombre (con la base parada, todas son idénticas) ==
+-rw-r----- 1 oracle oinstall   18792448 Oct 26 21:49 control01.ctl
+-rw-r----- 1 oracle oinstall   18792448 Oct 26 21:49 control02.ctl
+-rw-r----- 1 oracle oinstall   18792448 Oct 26 21:49 control03.ctl
+-rw-r--r-- 1 oracle oinstall       8115 Oct 26 21:49 controlfile_lab5.trc
+== 4. Arranque: Oracle abre y mantiene las TRES copias ==
+ORACLE instance started.
+
+Total System Global Area 1603398928 bytes
+Fixed Size		    5033232 bytes
+Variable Size		  503316480 bytes
+Database Buffers	 1090519040 bytes
+Redo Buffers		    4530176 bytes
+Database mounted.
+Database opened.
+
+NAME						 STATUS
+------------------------------------------------ -------
+/opt/oracle/oradata/FREE/control01.ctl
+/opt/oracle/oradata/FREE/control02.ctl
+/opt/oracle/oradata/FREE/control03.ctl
+
+  t=0s  docker=healthy  cdb/pdb=READWRITE/READWRITE
