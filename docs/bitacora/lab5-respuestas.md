@@ -390,3 +390,44 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 > **L2 (tipo examen) · Sesiones esperando en «log file switch (archiving needed)» y conexiones nuevas con ORA-00257. ¿Qué dos acciones lo resuelven? (Elige dos.)**
 >
 > **A y C.** **A**: aumentar `DB_RECOVERY_FILE_DEST_SIZE` si hay disco — medido: al devolver a 4 GB, ARCn reintentó y archivó solo. **C**: copiar los archivados con RMAN y borrarlos con `DELETE INPUT` (libera espacio sin romper el control file). **B** es falsa (más `SWITCH LOGFILE` empeora), **D** falsa (NOARCHIVELOG en caliente no se puede y no arregla el archivado pendiente) y **E** falsa (`rm` deja la FRA y el control file desincronizados; hay que hacerlo con RMAN).
+
+## Parte M — Undo: lectura consistente y su coste en redo
+
+**Dos sesiones sobre la misma fila** (`12-lectura-consistente.script.log`): A hace `UPDATE` de la fila 101 a `EGRESADO` y tarda 25 s en confirmar. Mientras tanto, B:
+1. **Ve `ACTIVO`** (el valor confirmado), reconstruido con el undo aunque el bloque ya dice `EGRESADO`.
+2. La transacción de A consume undo: `v$transaction` = **1 bloque / 1 registro**.
+3. A mantiene **TM modo 3** (`ACA_ESTUDIANTES`) y **TX modo 6** (la fila).
+4. B intenta bloquear (`FOR UPDATE WAIT 3`) → **ORA-00054 + ORA-40097** (`transaction ID 1.20.674`).
+5. Tras el COMMIT de A, B ve **`EGRESADO`**.
+6. **Flashback Query** 40 s atrás → **`ACTIVO`** (leído del undo).
+7. Reparación lógica con el propio undo (lab repetible). `undo_retention` = **900**, `undo_management AUTO`, `UNDOTBS1`.
+
+**Undo y redo por DML** (`12-undo-y-redo.script.log`, 10 000 filas):
+| Operación | Undo (bloques / KB) | Redo (KB) | …describe el undo (KB) | Redo del ROLLBACK (KB) |
+|---|---|---|---|---|
+| INSERT | 148 / 1184 | 4965 | 2050 | 444 |
+| UPDATE (`canal`) | 71 / 568 | 1260 | 540 | 751 |
+| **DELETE** | **431 / 3448** | **7184** | 3299 | **4732** |
+
+> **P17 · Explica, con los pasos 1 a 4 de tu evidencia 12, la frase «lectores no bloquean a escritores».**
+> - **Paso 1**: A ya escribió `EGRESADO` en el bloque (escritor), pero **B lee `ACTIVO`** sin esperar: el lector **no** se bloquea ni bloquea; reconstruye la versión confirmada con el undo.
+> - **Pasos 2-3**: A solo tiene bloqueos TM 3 y TX 6 sobre su fila — no bloquea a los lectores, solo a otros **escritores**.
+> - **Paso 4**: cuando B deja de ser lector y quiere **escribir** (`FOR UPDATE`), ahí sí choca con A: **ORA-00054**. Es el único conflicto real: **dos escritores sobre la misma fila**. Espejo: *escritores no bloquean a lectores* (paso 1). En Oracle el bloqueo TX vive en la cabecera del bloque (lista ITL), no en una tabla de bloqueos en memoria.
+
+> **P18 · ¿Por qué un DELETE genera más undo que un INSERT? ¿Por qué el ROLLBACK también genera redo?**
+> - **DELETE**: para deshaylo hay que guardar **la fila entera** (todas las columnas) **y sus entradas de índice**; medido **431 bloques / 3448 KB**. **INSERT** solo necesita «borra este ROWID» → **148 bloques / 1184 KB** (≈ 1/3). UPDATE guarda solo las columnas cambiadas (`canal`, sin índice) → el menor (71).
+> - **ROLLBACK genera redo** porque el undo vive en `UNDOTBS1`, que también está en el buffer cache y puede perderse en una caída: para poder deshacer **después** del crash, Oracle debe poder rehacer **primero** el undo, y eso se protege con redo; además deshacer es aplicar cambios inversos, que también generan redo. Medido: el ROLLBACK del DELETE generó **4732 KB** de redo (casi tanto como el propio DELETE). «Casi la mitad del redo describe el undo» (columna 4).
+
+> **M1 (tipo examen) · A hace un `UPDATE` sin confirmar. ¿Qué ve B al consultar la fila?**
+> **C. El valor confirmado anterior, reconstruido con el undo.** Medido: B ve `ACTIVO` (paso 1). No es el nuevo (A), no hay error (B no escribe) y no espera (los lectores no se bloquean).
+
+> **M2 (tipo examen) · ¿Qué operación de 10 000 filas genera, en general, MÁS undo?**
+> **C. DELETE.** Medido: **431 bloques / 3448 KB** (≈ 3× el INSERT). Guarda la fila entera y sus índices.
+
+> **M3 (tipo examen) · Informe nocturno con ORA-01555. ¿Qué dos medidas son adecuadas? (Elige dos.)**
+> **B y D.** **B**: subir `UNDO_RETENTION` y el tamaño del tablespace de undo (o AUTOEXTEND). **D**: `ALTER TABLESPACE undotbs1 RETENTION GUARANTEE` si la consulta es crítica (garantiza la retención a riesgo de que las transacciones fallen). `v$undostat` lo mide (`MAXQUERYLEN`, `SSOLDERRCNT`). **A** (redo logs) y **E** (`LOG_BUFFER`) no tienen relación con undo; **C** (NOARCHIVELOG) tampoco arregla el undo.
+
+> **Reto profesional · El coste de un DELETE en tu FRA.**
+>
+> Anoté `v$recovery_file_dest.space_used` = **346,9 MB**, ejecuté `12-undo-y-redo.sql` otra vez y forcé `ALTER SYSTEM ARCHIVE LOG CURRENT` (`12-reto-fra-delete.script.log`). La FRA pasó a **493,2 MB**: **creció 146,3 MB** (un solo `.arc`).
+> El redo que generó el script (delta de `v$sysstat 'redo size'`) fue **17,4 MB** (452426 → 470236 KB): DML 11,6 MB + rollbacks 5,7 MB. **La FRA creció mucho más (146,3 MB) que el redo del script (17,4 MB)** porque el archivo archivado no es «lo que hizo el script» sino **todo el redo acumulado en el grupo actual desde el último archivado** —actividad interna, el trabajo previo de las Partes L y M— en cuanto forcé el cambio de log. Un `.arc` = el contenido de un grupo completo, no una transacción.

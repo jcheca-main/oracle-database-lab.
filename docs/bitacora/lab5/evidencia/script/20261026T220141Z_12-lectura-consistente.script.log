@@ -1,0 +1,69 @@
+################ SESIÓN B ################
+
+[B] 1. ¿Qué ve B? El valor CONFIRMADO, reconstruido con el undo (lectura consistente)
+
+ESTUDIANTE_ID ESTADO
+------------- ----------
+	  101 ACTIVO
+
+[B] 2. La transacción de A: bloques y registros de undo que ya consume (v$transaction)
+
+SEGMENTO_UNDO BLOQUES_UNDO REGISTROS_UNDO INICIO		 SID_DE_A
+------------- ------------ -------------- -------------------- ----------
+	    1		 1		1 10/26/26 22:01:41	       21
+
+[B] 3. Bloqueos de A: TM (tabla, modo 3 = row exclusive) y TX (fila, modo 6 = exclusive)
+
+       SID TIPO      LMODE OBJETO
+---------- ---- ---------- ----------------
+	21 TM		 3 ACA_ESTUDIANTES
+	21 TX		 6
+
+[B] 4. B intenta bloquear la misma fila: esperar como mucho 3 s (error esperado: ORA-00054, fila bloqueada por A)
+SELECT estado FROM admin_academia.aca_estudiantes WHERE estudiante_id = 101 FOR UPDATE WAIT 3
+                                  *
+ERROR at line 1:
+ORA-00054: Failed to acquire a lock (Type: "TX", Name: "Transaction", Description: "Lock held by a transaction to allow other transactions to wait for it")
+because it is currently held by another session. The resource being locked can be identified by 65556 ("usn<<16 | slot") and 674 ("sequence")
+ORA-40097: Failure to acquire row lock, currently held by transaction ID 1.20.674
+Help: https://docs.oracle.com/error-help/db/ora-00054/
+
+
+
+[B] 5. Esperamos a que A confirme...
+
+ESTUDIANTE_ID ESTADO
+------------- ----------
+	  101 EGRESADO
+
+[B] 6. Consulta de flashback (Flashback Query): la fila tal como era hace 40 s, leída del undo
+
+ESTUDIANTE_ID ESTADO
+------------- ----------
+	  101 ACTIVO
+
+[B] 7. Reparación lógica con el undo: devolver la fila a su valor anterior (deja el lab repetible)
+
+ESTUDIANTE_ID ESTADO
+------------- ----------
+	  101 ACTIVO
+
+[B] 8. ¿Cuánto tiempo intenta Oracle conservar el undo? (undo_retention y v$undostat)
+
+NAME		     VALUE
+-------------------- ----------
+undo_management      AUTO
+undo_tablespace      UNDOTBS1
+undo_retention	     900
+
+DESDE HASTA   UNDOBLKS	 TXNCOUNT CONSULTA_MAS_LARGA_S RETENCION_AJUSTADA_S  ORA_01555
+----- ----- ---------- ---------- -------------------- -------------------- ----------
+21:59 22:02	   172	       88		     0			900	     0
+21:49 21:59	 21453	     5452		     0			900	     0
+################ SESIÓN A (en paralelo) ################
+Session altered.
+[A] UPDATE de la fila 101 a EGRESADO, sin COMMIT todavía
+1 row updated.
+PL/SQL procedure successfully completed.
+Commit complete.
+[A] COMMIT hecho
