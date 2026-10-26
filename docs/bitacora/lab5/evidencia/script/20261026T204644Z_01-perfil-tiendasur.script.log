@@ -1,0 +1,47 @@
+
+===== 1. Tablas: r filas, b bloques, R bytes por fila y bfr = r / b (compáralo con la ficha de la actividad 3.2) =====
+
+TABLE_NA          R          B    R_BYTES        BFR         MB LAST_ANAL
+-------- ---------- ---------- ---------- ---------- ---------- ---------
+CLIENTE      100000       1517        102         66       11.9 26-OCT-26
+PEDIDO      1000000       5320         32        188       41.6 26-OCT-26
+(Actividad 3.2: cliente 1 000 000 filas, bfr 40; pedido 20 000 000, bfr 50. Aquí: 1/10 y 1/20 de las filas, y filas más cortas: bfr mayor)
+
+===== 2. Columnas: valores distintos (NDV), selectividad de una igualdad (1/NDV) y si hay histograma =====
+
+TABLE_NA COLUMN_NAME    DATA_TYPE           NDV PCT_POR_VALOR  NUM_NULLS HISTOGRAM  AVG_COL_LEN
+-------- -------------- ------------ ---------- ------------- ---------- ---------- -----------
+CLIENTE  ID_CLIENTE     NUMBER           100000          .001          0 NONE                 5
+CLIENTE  DNI            CHAR              98680          .001          0 NONE                10
+CLIENTE  EMAIL          VARCHAR2         100000          .001          0 NONE                26
+CLIENTE  NOMBRE         VARCHAR2            500            .2          0 NONE                10
+CLIENTE  APELLIDOS      VARCHAR2            224         .4464          0 NONE                19
+CLIENTE  TELEFONO       VARCHAR2         100000          .001          0 NONE                10
+CLIENTE  PAIS           CHAR                 40           2.5          0 FREQUENCY            3
+CLIENTE  CIUDAD         VARCHAR2           2000           .05          0 HYBRID              11
+CLIENTE  FECHA_ALTA     DATE               2855          .035          0 NONE                 8
+PEDIDO   ID_PEDIDO      NUMBER          1000000         .0001          0 NONE                 5
+PEDIDO   ID_CLIENTE     NUMBER           100816          .001          0 NONE                 5
+PEDIDO   FECHA_PEDIDO   TIMESTAMP(0)     997696         .0001          0 NONE                 7
+PEDIDO   ESTADO         CHAR                  4            25          0 FREQUENCY            2
+PEDIDO   IMPORTE        NUMBER            49908          .002          0 NONE                 5
+PEDIDO   CANAL          CHAR                  3       33.3333          0 FREQUENCY            2
+PEDIDO   CODIGO_POSTAL  VARCHAR2          11000         .0091          0 NONE                 6
+(Con histograma (FREQUENCY) el optimizador sabe que 'P' es el 2 % y 'C' el 90 %. Sin él, supondría 1/4 = 25 % para cada estado)
+
+===== 3. Los sesgos que dan juego a las consultas Q1-Q16 =====
+
+DATO                                PCT
+---------------------------- ----------
+cliente pais = ES                  60.1
+cliente ciudad = Lorca               .1
+cliente apellidos LIKE Gonz%        2.1
+pedido estado = P                     2
+pedido ??ltimo a??o                33.3
+
+===== 4. El entorno de medida que usaremos en todo el laboratorio =====
+SELECT /*+ GATHER_PLAN_STATISTICS */ ...;                     -- ejecuta y anota filas y lecturas REALES de cada paso
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY_CURSOR(FORMAT => 'IOSTATS LAST'))
+E-Rows = filas que el optimizador ESPERABA · A-Rows = filas REALES · Buffers = lecturas lógicas · Reads = físicas
+Y en una línea: EXEC lab_tools.medir.consulta('etiqueta', 'SELECT ...')  (01-herramienta-medir.sql)
+Regla profesional: se compara con números (Buffers), no con la sensación de "va rápido".
