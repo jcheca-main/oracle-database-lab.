@@ -1,0 +1,12 @@
+
+Session altered.
+
+=== INDEX_STATS de UX_CLI_EMAIL (altura, hojas, bytes reales por entrada) ===
+
+INDEX_NAME															     ALTURA   ENTRADAS	    HOJAS
+-------------------------------------------------------------------------------------------------------------------------------- ---------- ---------- ----------
+BYTES_POR_ENTRADA BYTES_UTILES_HOJA
+----------------- -----------------
+UX_CLI_EMAIL																  3	100000	      501
+	     35.9	       7996
+

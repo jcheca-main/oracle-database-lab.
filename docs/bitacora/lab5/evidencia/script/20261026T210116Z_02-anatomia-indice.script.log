@@ -1,0 +1,147 @@
+
+===== 1. El diccionario: altura, hojas, claves distintas y factor de agrupamiento de cada índice de TiendaSur =====
+
+TABLE_NA INDEX_NAME         UNICO         ALTURA      HOJAS     CLAVES   ENTRADAS         CF BLOQUES_TABLA
+-------- ------------------ --------- ---------- ---------- ---------- ---------- ---------- -------------
+CLIENTE  IX_CLI_PAIS_CIUDAD NONUNIQUE          3        349      33403     100000      99340          1517
+CLIENTE  PK_CLIENTE         UNIQUE             2        187     100000     100000       1477          1517
+CLIENTE  UX_CLI_EMAIL       UNIQUE             3        501     100000     100000      20203          1517
+PEDIDO   IX_PED_CLIENTE     NONUNIQUE          3       2216     100816    1000000     999041          5320
+PEDIDO   IX_PED_FECHA       NONUNIQUE          3       2653     997696    1000000       5220          5320
+PEDIDO   IX_PED_IMPORTE     NONUNIQUE          3       2204      49908    1000000     998078          5320
+PEDIDO   PK_PEDIDO          UNIQUE             3       1875    1000000    1000000       5220          5320
+(altura = BLEVEL + 1: BLEVEL cuenta solo los niveles de ramas, sin las hojas)
+
+===== 2. Por dentro: ANALYZE INDEX ... VALIDATE STRUCTURE llena INDEX_STATS (una fila, la del último análisis) =====
+
+INDEX_NAME             ALTURA ENTRADAS_HOJA      HOJAS ENTRADAS_RAMA      RAMAS BYTES_POR_ENTRADA BYTES_UTILES_HOJA   PCT_USED   BORRADAS
+------------------ ---------- ------------- ---------- ------------- ---------- ----------------- ----------------- ---------- ----------
+IX_PED_CLIENTE              3       1000000       2216          2215          6              15.9              7996         90          0
+Factor de ramificaci??n real (fo) = (hojas + ramas - 1) / ramas = (2216 + 6 - 1) / 6 = 370
+Factor de ramificaci??n m??ximo    = bytes ??tiles de rama / bytes por entrada de rama = 8028 / 14.8 = 543
+Entradas por hoja: medidas 451, m??ximo 503  -> llenado 90 % (PCTFREE 10 deja el 10 % libre al crear)
+Altura comprobada: 1 + ceil(log_fo(hojas)) = 1 + ceil(log_543(2216)) = 3   (INDEX_STATS dice 3)
+  Con       1,000,000 filas ->      2209 hojas -> altura 3 -> 4 lecturas para encontrar UNA fila (altura + tabla)
+  Con      20,000,000 filas ->     44180 hojas -> altura 3 -> 4 lecturas para encontrar UNA fila (altura + tabla)
+  Con   1,000,000,000 filas ->   2208969 hojas -> altura 4 -> 5 lecturas para encontrar UNA fila (altura + tabla)
+  Con 100,000,000,000 filas -> 220896842 hojas -> altura 5 -> 6 lecturas para encontrar UNA fila (altura + tabla)
+(La altura crece con el LOGARITMO: de un millón a cien mil millones de filas, solo uno o dos niveles más)
+
+===== 3. El entorno de medida: lo que cuesta DE VERDAD una búsqueda (GATHER_PLAN_STATISTICS + DISPLAY_CURSOR) =====
+
+ ID_PEDIDO    IMPORTE
+---------- ----------
+      4711      81.83
+(primera ejecución descartada: puede incluir trabajo único, como limpiar el bloque. Se mide la segunda, en caliente)
+
+ ID_PEDIDO    IMPORTE
+---------- ----------
+      4711      81.83
+
+PLAN_TABLE_OUTPUT
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+SQL_ID  0w483zs8uwkzq, child number 0
+-------------------------------------
+SELECT /*+ GATHER_PLAN_STATISTICS */ id_pedido, importe FROM
+tiendasur.pedido WHERE id_pedido = 4711
+
+Plan hash value: 4199691197
+
+---------------------------------------------------------------------------------------------------
+| Id  | Operation                   | Name      | Starts | E-Rows | A-Rows |   A-Time   | Buffers |
+---------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |           |      1 |        |      1 |00:00:00.01 |       4 |
+|   1 |  TABLE ACCESS BY INDEX ROWID| PEDIDO    |      1 |      1 |      1 |00:00:00.01 |       4 |
+|*  2 |   INDEX UNIQUE SCAN         | PK_PEDIDO |      1 |      1 |      1 |00:00:00.01 |       3 |
+---------------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   2 - access("ID_PEDIDO"=4711)
+
+(Buffers = lecturas lógicas: altura del índice (3) + 1 bloque de tabla = 4. Es la cuenta de la Unidad 3, hecha por Oracle)
+-- Si la consulta solo pide columnas que están en el índice, no hace falta ir a la tabla: 3 lecturas
+
+ ID_PEDIDO
+----------
+      4711
+
+PLAN_TABLE_OUTPUT
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Id  | Operation         | Name      | Starts | E-Rows | A-Rows |   A-Time   | Buffers |
+|   0 | SELECT STATEMENT  |           |      1 |        |      1 |00:00:00.01 |       3 |
+|   1 |  INDEX UNIQUE SCAN| PK_PEDIDO |      1 |      1 |      1 |00:00:00.01 |       3 |
+
+===== 4. Raíz, rama y hoja: volcado real de los bloques de PK_CLIENTE =====
+
+
+
+
+
+
+
+
+
+-- El treedump: la raíz (branch) y sus primeras hojas (leaf), con entradas (row) y bytes libres (avs)
+branch: 0x313 787 (0: nrow: 187, level: 1)
+   leaf: 0x314 788 (-1: row:578.578 avs:8)
+   leaf: 0x315 789 (0: row:571.571 avs:8)
+   leaf: 0x316 790 (1: row:571.571 avs:8)
+
+
+
+
+--- [A] RA??Z: kdxconro entradas; kdxbrlmc = hijo de la izquierda; cada row# = clave + dba del hijo ---
+Branch block dump
+=================
+
+kdxcolev 1
+kdxcolok 0
+kdxcoopc 0x80: opcode=0: iot flags=--- is converted=Y
+kdxconco 1
+kdxcosdc 1
+kdxconro 186
+kdxcofbo 400=0x190
+kdxcofeo 6401=0x1901
+kdxcoavs 6001
+kdxbrlmc 788=0x00000314
+kdxbrsno 185
+kdxbrbksz 8056
+kdxbr2urrc 0
+row#0[8048] dba: 789=0x00000315
+col 0; len 3; (3):  c2 06 50
+row#1[8040] dba: 790=0x00000316
+col 0; len 3; (3):  c2 0c 33
+
+--- [B] HOJA: kdxcoavs = bytes libres; kdxlenxt/kdxleprv = hojas vecinas; row# = ROWID + clave ---
+Leaf block dump
+===============
+
+kdxcolev 0
+kdxcolok 0
+kdxcoopc 0x80: opcode=0: iot flags=--- is converted=Y
+kdxconco 1
+kdxcosdc 1
+kdxconro 578
+kdxcofbo 1192=0x4a8
+kdxcofeo 1200=0x4b0
+kdxcoavs 8
+kdxlespl 0
+kdxlende 0
+kdxlenxt 789=0x00000315
+kdxleprv 0=0x00000000
+kdxledsz 6
+kdxlebksz 8032
+row#0[1200] flag: -------, lock: 0, len=11, data:(6):  00 00 03 1b 00 00
+col 0; len 2; (2):  c1 02
+row#1[1211] flag: -------, lock: 0, len=11, data:(6):  00 00 03 1b 00 01
+col 0; len 2; (2):  c1 03
+row#2[1222] flag: -------, lock: 0, len=11, data:(6):  00 00 03 1b 00 02
+
+-- Comprobación: la primera entrada de la hoja (clave c1 02 = el número 1) apunta al ROWID del cliente 1
+
+ID_CLIENTE CLAVE_EN_HEXADECIMAL     BLOQUE BLOQUE_HEX     RANURA
+---------- -------------------- ---------- ---------- ----------
+         1 Typ=2 Len=2: c1,2           795 0000031B            0
+(data:(6) de la entrada = 4 bytes de bloque + 2 de ranura: el ROWID "corto" de un índice de tablespace bigfile)
