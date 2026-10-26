@@ -325,3 +325,45 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 > **J2 (tipo examen) · ¿Qué dos datos guarda el control file? (Elige dos.)**
 >
 > **A y C.** **A**: el nombre y la ubicación de los datafiles y redo logs (los vi en el `CREATE CONTROLFILE` trazado). **C**: el SCN del último checkpoint (lo medí en la Parte I: `v$datafile.checkpoint_change#`). **B** es falso (los parámetros viven en el SPFILE), **D** falso (las contraseñas, en el archivo de contraseñas) y **E** falso (las filas del diccionario están en los datafiles, no en el control file).
+
+## Parte K — Registros de redo: grupos, miembros y cambios de log
+
+**Grupos y miembros** (`10-redo.script.log`): mi base tenía **3 grupos** de **200 MB** (no los 20 MB de la imagen) con **1 miembro** cada uno. `10-redo.sql` añadió un **segundo miembro** a los tres (`redo01b/02b/03b.log`): LGWR escribe los miembros de un grupo **a la vez y de forma idéntica**. Recién añadidos aparecen `INVALID` —**no es un error**, es que aún no se ha escrito en ellos; tras dos `ALTER SYSTEM SWITCH LOGFILE` dejan de estar INVALID (menos `redo02b`, porque el grupo 2 no se ha vuelto a usar).
+
+**Cambio de log**: el grupo `CURRENT` pasa al siguiente **en círculo** (2 → 3 → 1). Cada cambio dispara un checkpoint; el grupo viejo pasa a `ACTIVE` (aún necesario para recuperación) y luego a `INACTIVE`.
+
+**Errores que Oracle rechaza** (sección 4): borrar el grupo `CURRENT` → **ORA-01623**; borrar un miembro del `CURRENT` → **ORA-01609**; y en mi caso borrar otro grupo → **ORA-00350** (`needs to be archived`) en vez del ORA-01567 del ejemplo, porque en **ARCHIVELOG** el grupo aún no archivado no se puede soltar: Oracle se protege y no deja perder redo.
+
+> **P15 · Explica los estados CURRENT, ACTIVE e INACTIVE con tu evidencia 10 y por qué Oracle rechaza los tres borrados del paso 4.**
+> - **CURRENT**: LGWR **está escribiendo** en él ahora (medido: el grupo 2 al inicio, luego el 3 y el 1). **No se puede reutilizar**.
+> - **ACTIVE**: ya no es el actual, pero **sus cambios aún no están todos en los datafiles** (falta checkpoint) — medido: tras un switch el grupo viejo queda `ACTIVE` (grupo 2, 3, 1 a su vez). **No se puede reutilizar**: se necesitaría para recuperar la instancia.
+> - **INACTIVE**: sus cambios **ya están en los datafiles**; reutilizable (y en ARCHIVELOG, además debe estar **archivado**).
+> - **Por qué rechaza los borrados**: (4a) borrar el `CURRENT` (ORA-01623) = borrar el diario en uso; (4b) borrar un miembro del `CURRENT` (ORA-01609) perdería la redundancia del grupo activo; (4c) dejar menos de dos grupos usable (mi ORA-00350 / el ORA-01567) dejaría a LGWR sin dónde escribir el siguiente cambio. En los tres casos **Oracle se niega para no perder redo ni capacidad de escribir**.
+
+> **K1 (tipo examen) · Un grupo de redo tiene estado ACTIVE. ¿Qué afirmación es correcta?**
+>
+> **C. Contiene cambios que aún podrían necesitarse para una recuperación de instancia.** Es la definición de `ACTIVE` (medido: el grupo viejo queda `ACTIVE` tras el switch hasta que el checkpoint lo vacía). **A** es falsa (escribir es `CURRENT`), **B** falsa (no se puede borrar sin más), **D** falsa (`ARCHIVED=YES` y `ACTIVE` no son lo mismo: un grupo puede estar activo sin archivar).
+
+> **Reto profesional · Dimensiona el redo de TiendaSur (sin ejecutar la migración).**
+>
+> Conté los cambios de log por hora (`v$log_history`, `10-reto-dimensionar.script.log`): la hora más pesada que conservo es la **21**, con **9 cambios de log** (carga sostenida de los experimentos de índices y la cola de 600 000 filas). Con grupos de **200 MB**, eso son **9 × 200 MB = 1800 MB de redo en esa hora**. Para que esa carga produzca **como mucho 4 cambios/hora**: tamaño de grupo ≥ 1800 / 4 = **450 MB** → propongo **500 MB**. (La propia carga de TiendaSur, ~1,1 M de filas de la Parte B, a 200 MB ya fue solo un puñado de cambios; el pico de 9 es del bloque de experimentos.)
+>
+> **Comandos para migrar a 500 MB (escritos, NO ejecutados):**
+> ```sql
+> -- 1. Añadir grupos nuevos de 500 MB (sin parar la base)
+> ALTER DATABASE ADD LOGFILE GROUP 4 '/opt/oracle/oradata/FREE/redo04.log' SIZE 500M;
+> ALTER DATABASE ADD LOGFILE GROUP 5 '/opt/oracle/oradata/FREE/redo05.log' SIZE 500M;
+> ALTER DATABASE ADD LOGFILE GROUP 6 '/opt/oracle/oradata/FREE/redo06.log' SIZE 500M;
+> -- 2. Multiplexar los nuevos (segundo miembro en otro disco)
+> ALTER DATABASE ADD LOGFILE MEMBER '/opt/oracle/oradata/FREE/redo04b.log' TO GROUP 4;
+> ALTER DATABASE ADD LOGFILE MEMBER '/opt/oracle/oradata/FREE/redo05b.log' TO GROUP 5;
+> ALTER DATABASE ADD LOGFILE MEMBER '/opt/oracle/oradata/FREE/redo06b.log' TO GROUP 6;
+> -- 3. Forzar cambios de log y checkpoints hasta que los viejos queden INACTIVE
+> ALTER SYSTEM SWITCH LOGFILE;  -- repetir hasta que 1, 2 y 3 estén INACTIVE
+> ALTER SYSTEM CHECKPOINT;
+> -- 4. Borrar los grupos viejos (ya INACTIVE y archivados)
+> ALTER DATABASE DROP LOGFILE GROUP 1;
+> ALTER DATABASE DROP LOGFILE GROUP 2;
+> ALTER DATABASE DROP LOGFILE GROUP 3;
+> ```
+> **Trampa evitada**: no se puede redimensionar un grupo existente (hay que añadir grupos nuevos y borrar los viejos), y no se borra un grupo `ACTIVE` ni `CURRENT`.
