@@ -169,3 +169,37 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 > 1. El **CF malo** cruza la línea de la tabla pronto (~1 %) y el **CF bueno** casi nunca (~100 %): es el mismo tipo de índice, pero el CF bueno lee bloques **consecutivos** (≈ k/bfr) y el malo salta a un bloque **distinto por fila** (≈ k).
 > 2. El **optimizador** cambia aún más temprano (0,1–0,2 %) porque su modelo de coste valora la lectura **aleatoria ~5×** la multibloque (`c_sec/c_aleat = 1/5`), no usa el recuento crudo de lecturas lógicas.
 > 3. Por eso los tres puntos son distintos: el cruce del índice malo (~1 %, lecturas crudas), el del bueno (~100 %) y el del optimizador (~0,11 %, ponderado a disco) difieren por el **orden físico de las filas** (agrupamiento) y por el **peso del coste** del acceso aleatorio.
+
+## Parte F — Sargabilidad: consulta rota frente a consulta reescrita
+
+**Las cinco reglas, medidas** (`05-sargabilidad.script.log`). La columna indexada debe quedar **desnuda** a un lado del operador:
+- **Regla 1 (función):** `UPPER(email)=…` **1486** (completo) → `email=LOWER(…)` **4** (usa `UX_CLI_EMAIL`).
+- **Regla 2 (aritmética):** `fecha+INTERVAL '30' DAY>=…` **5285** → despejar `fecha>=…−30` **320** (rango en `IX_PED_FECHA`).
+- **Regla 3 (conversión implícita):** `codigo_postal=30001` (VARCHAR2 vs NUMBER) **5232** → `'30001'` **106**. La prueba del delito está en el plan: `filter(TO_NUMBER("CODIGO_POSTAL")=30001)`.
+- **Regla 4 (comodín izquierdo):** `LIKE '%ez'` recorrido completo (1523); `LIKE 'Gonz%'` índice (2024).
+- **Regla 5 (OR):** `email=:t OR telefono=:t` sin índice en `telefono` **1486** → con índice en las dos ramas (BITMAP OR) o `UNION` **6**.
+- **Bonus Q11:** `EXTRACT(YEAR…)=2025` y el rango de fechas **ambos** hacen recorrido completo (5232): un año es 1/3 de los pedidos, está muy por encima del punto de equilibrio. **Sargable no significa «usa el índice»**.
+
+> **P9 · ¿Por qué Q4b (`'Gonz%'`) usa el índice y aun así lee más bloques que un recorrido completo?**
+>
+> `LIKE 'Gonz%'` **es** sargable: el comodín va al final, así que es un **rango** sobre el principio de la cadena y el optimizador puede usar `IX_CLI_APELLIDOS` (medido: `INDEX RANGE SCAN`, 2024 lecturas). Pero `apellidos` en `cliente` tiene **agrupamiento malo** (los clientes se cargaron en orden de id, los apellidos llegaron dispersos por `ORA_HASH`): cada una de las ~2056 filas `Gonz%` está en un **bloque distinto**, así que seguirlas por el índice toca ~2024 bloques, frente a los **1517** de un único barrido secuencial de la tabla. El 2,1 % de filas con CF malo está **muy por encima** del punto de equilibrio de la Parte E (~0,11 %): lo correcto ahí es el recorrido completo. El índice **puede** usarse; no **debe**.
+
+> **F1 (tipo examen) · `num_factura` VARCHAR2(10) con índice. ¿Qué predicado impide usarlo?**
+>
+> **B. `num_factura = 2025001`** (literal **número** contra VARCHAR2). Oracle aplica **siempre** la conversión a la **columna** (`TO_NUMBER(num_factura)`), nunca al literal, y el índice queda inutilizado → recorrido completo. Es la regla 3, que medí en Q3 (`filter(TO_NUMBER("CODIGO_POSTAL")=30001)`). **A** (cadena), **C** (`LIKE '2025%'`, rango) y **D** (`BETWEEN` de cadenas) dejan la columna desnuda y sí usan el índice.
+
+> **F2 (tipo examen) · ¿Qué dos reescrituras convierten `WHERE TRUNC(fecha) = DATE '2026-10-18'` en una condición sargable equivalente? (Elige dos.)**
+>
+> **A y C.** **A**: `fecha >= DATE '2026-10-18' AND fecha < DATE '2026-10-19'` (despeja el `TRUNC` como un rango de día completo). **C**: `fecha BETWEEN DATE '2026-10-18' AND DATE '2026-10-18' + INTERVAL '86399' SECOND` (el día entero como rango). **B** (`fecha = DATE '2026-10-18'`) solo cogería la medianoche exacta si `fecha` lleva hora; **D** (`TO_CHAR(fecha,…)=…`) y **E** (`fecha+0=…`) envuelven la columna en función/aritmética: no son sargables.
+
+> **Reto profesional · Revisión de código del PR del compañero.**
+>
+> Consulta propuesta: `SELECT * FROM tiendasur.cliente WHERE SUBSTR(telefono,1,3)='600' OR UPPER(apellidos)='GIL'`.
+>
+> **Comentario de revisión:** «Rompe la **regla 1** dos veces: `SUBSTR(telefono,1,3)` y `UPPER(apellidos)` envuelven la columna, así que **ninguna** rama puede usar un B-tree; y al ser un **OR** (regla 5) donde **ninguna** rama es indexable, Oracle hace **recorrido completo** (medido: **1487 lecturas**, evidencia `05-reto-revision.script.log`). Además hay un **bug de negocio**: `apellidos` guarda **dos palabras** (`'González Gil'`), luego `UPPER(apellidos)='GIL'` **no casa con nada** (medido: **0 filas**); si buscabas el apellido `Gil`, eso no es una reescritura sino Text o un índice — dímelo y lo diseñamos. **Reescritura:** despeja el teléfono a **rango de prefijo** `telefono >= '600' AND telefono < '601'` (sargable, usa el índice) y, si de verdad necesitas la rama de apellidos, decide primero la semántica.»
+>
+> **Medido antes/después** (con los índices `ix_cli_telefono`/`ix_cli_apellidos` recreados y luego borrados):
+> - **Rota:** 981 filas, **1487 lecturas**, `TABLE ACCESS FULL CLIENTE`.
+> - **Reescrita** (`(telefono>='600' AND telefono<'601') OR apellidos='Gil'`): 981 filas, **722 lecturas**, `BITMAP OR` sobre los dos índices.
+>
+> La reescritura baja de 1487 a 722, pero no a unas pocas lecturas: los 981 teléfonos que empiezan por `600` están **dispersos** (agrupamiento malo en `telefono`), así que seguir el índice toca cientos de bloques. Ganancia real, pero deja claro que la ramificación de apellidos no aporta nada (0 filas).
