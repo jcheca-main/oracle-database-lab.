@@ -1,0 +1,39 @@
+
+===== 1. El factor de agrupamiento (CF) según el diccionario: ¿cerca de los BLOQUES de la tabla o cerca de las FILAS? =====
+
+INDEX_NAME               CF BLOQUES_TABLA FILAS_TABLA VEREDICTO
+---------------- ---------- ------------- ----------- ----------------------------------------------------
+PK_PEDIDO              5220          5320     1000000 BUENO: filas vecinas en el ??ndice, vecinas en disco
+IX_PED_FECHA           5220          5320     1000000 BUENO: filas vecinas en el ??ndice, vecinas en disco
+IX_PED_IMPORTE       998078          5320     1000000 MALO: casi cada entrada salta a otro bloque
+IX_PED_CLIENTE       999041          5320     1000000 MALO: casi cada entrada salta a otro bloque
+
+===== 2. Calcularlo a mano: recorrer el índice en orden y contar cuántas veces cambia el bloque de la tabla =====
+
+INDEX_NAME       CF_CALCULADO
+---------------- ------------
+IX_PED_FECHA             5220
+IX_PED_CLIENTE         999041
+(Coincide con DBA_INDEXES: el CF es exactamente "cuántos bloques distintos leería si recorriera el índice entero")
+
+===== 3. La curva del punto de equilibrio, MEDIDA: lecturas lógicas para sumar el importe del k % de los pedidos =====
+b = 5320 bloques, r = 1000000 filas, bfr = 188
+k %         filas  ??ndice CF bueno  ??ndice CF malo   tabla entera   el optimizador elige (CF malo)
+.01 %         100                 4              111           5232   ??ndice
+.05 %         500                 7              478           5232   ??ndice
+.1 %         1000                11              975           5232   ??ndice
+.2 %         2000                19             2004           5232   recorrido completo
+.5 %         5000                42             4875           5232   recorrido completo
+1 %         10000                80             9920           5232   recorrido completo   <- el ??ndice malo ya lee m??s que la tabla
+2 %         20000               159            19957           5232   recorrido completo   <- el ??ndice malo ya lee m??s que la tabla
+5 %         50000               395            50041           5232   recorrido completo   <- el ??ndice malo ya lee m??s que la tabla
+10 %       100000               789           100167           5232   recorrido completo   <- el ??ndice malo ya lee m??s que la tabla
+20 %       200000              1576           200253           5232   recorrido completo   <- el ??ndice malo ya lee m??s que la tabla
+50 %       500000              3938           500374           5232   recorrido completo   <- el ??ndice malo ya lee m??s que la tabla
+100 %     1000000              7875          1001259           5232   recorrido completo   <- hasta el ??ndice bueno pierde
+
+Teor??a (Unidad 3, 3.1.8): con CF malo, cada fila es una lectura aleatoria -> el ??ndice compensa si k/r < (1/bfr)??(c_sec/c_aleat)
+  En lecturas l??gicas (c_sec = c_aleat):  k/r < 1/188 = .53 %
+  En disco, con c_sec/c_aleat = 1/5:      k/r < .11 %   (la lectura aleatoria es la cara)
+(Con CF BUENO el índice lee unas k/bfr hojas y bloques: compensa hasta porcentajes mucho mayores. El CF es propiedad de la TABLA
+(de cómo están ordenadas sus filas), no del índice: reconstruir el índice NO lo mejora; reordenar la tabla, sí)

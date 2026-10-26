@@ -111,3 +111,61 @@ Medidas del perfil: **CLIENTE** bfr **66** (100 000 filas / 1 517 bloques, `avg_
 >
 > **No.** Medido (`03-reto-q9.script.log`): la versión actual cuesta **5 lecturas lógicas** (plan `COUNT STOPKEY > VIEW > TABLE ACCESS BY INDEX ROWID PEDIDO > INDEX FULL SCAN DESCENDING IX_PED_FECHA`), porque `STOPKEY` se detiene a las 20 filas.
 > Para hacerlo cubriente, `Q9` hace `SELECT *`: haría falta un índice con **las 7 columnas** de `pedido`, es decir ≈ **42 MB** (tanto como la tabla entera, sección 8) y mantenido en **cada INSERT/UPDATE** de `pedido`, **para ahorrar esas 5 lecturas** de una consulta que solo devuelve 20 filas. **Decisión (una línea, dos números):** *no; 5 lecturas actuales frente a +42 MB de índice que cada escritura mantendría.* (En cambio, el cubriente de Q7 sí compensa: es la consulta más frecuente —2000/s— y solo necesita unas pocas columnas.)
+
+## Parte E — Factor de agrupamiento y punto de equilibrio
+
+**El CF es de la tabla, no del índice.** `04-agrupamiento-equilibrio.script.log`: `PK_PEDIDO` e `IX_PED_FECHA` CF **5220** (≈ los 5320 bloques) = **BUENO**; `IX_PED_IMPORTE` 998 078 y `IX_PED_CLIENTE` **999 041** (≈ los 1 000 000 filas) = **MALO**. Recorrer el índice a mano con `LAG` sobre el ROWID da **exactamente** el mismo número (5220 y 999 041), lo que demuestra que el CF es «cuántos bloques distintos leería si recorrera el índice entero».
+
+> **P7 · ¿Por qué `IX_PED_FECHA` tiene el CF cercano a los bloques e `IX_PED_CLIENTE` cercano a las filas? ¿Lo arreglaría un `REBUILD`?**
+>
+> Porque `pedido` se cargó **en orden de `fecha_pedido`** (`INSERT /*+ APPEND */ … ORDER BY n`, y la fecha crece con `n`): dos filas vecinas en el índice por fecha están **en el mismo bloque** de tabla, así que el recorrido apenas cambia de bloque → CF ≈ nº de bloques (**5220**). En cambio `id_cliente` se repartió **al azar** (`ORA_HASH`): dos filas vecinas por cliente están **en bloques distintos**, casi cada salto de fila es un salto de bloque → CF ≈ nº de filas (**999 041**).
+>
+> **No, un `REBUILD` no lo arregla.** El CF mide el orden físico de las **filas en la tabla**, y el `REBUILD` solo reordena las claves del **índice**: el orden de las filas en disco no cambia, así que el recuento de cambios de bloque es idéntico. Lo que cambia el CF es reordenar la **tabla** (`MOVE` con `ORDER BY`, una IOT o un clúster) — y al reordenar por cliente **empeorarías** el CF de fecha: solo hay un orden físico.
+
+> **P8 · Según tu curva, ¿a partir de qué porcentaje deja de compensar cada índice? Compáralo con la fórmula de la Unidad 3.**
+>
+> De mi curva (evidencia `04-agrupamiento-equilibrio.script.log`, sección 3; la tabla entera cuesta siempre **5232**):
+> - **Índice con CF malo** (`IX_PED_CLIENTE`): sus lecturas superan a la tabla entera desde el **1 %** (9 920 > 5232). Pero **el optimizador** lo abandona antes, entre **0,1 %** y **0,2 %**.
+> - **Índice con CF bueno** (`IX_PED_FECHA`): solo pierde al **100 %** (7 875 > 5232), porque lee bloques **consecutivos** (≈ k/bfr).
+>
+> **Fórmula (Unidad 3, 3.1.8):** con CF malo, cada fila es una lectura aleatoria, así que el índice compensa si `k/r < (1/bfr)·(c_sec/c_aleat)`. Con bfr = 188: en **lecturas lógicas** (`c_sec = c_aleat`), `k/r < 1/188 = 0,53 %`; **en disco** (`c_sec/c_aleat = 1/5`), `k/r < 0,11 %`. El cambio del optimizador (0,1–0,2 %) coincide con la predicción **en disco** (0,11 %): su modelo de coste asume que la lectura aleatoria es ~5× más cara que la multibloque, por eso se rinde antes de lo que dirían las lecturas lógicas crudas (1 %).
+
+> **E1 (tipo examen) · CF = 9 950 000 sobre 10 000 000 filas y 80 000 bloques; se pide el 3 % por ese índice. ¿Plan razonable?**
+>
+> **B. Recorrido completo de tabla.** El CF (9,95 M) está pegado a las filas (10 M) = **agrupamiento malo**: cada fila del índice es un bloque distinto, así que el 3 % (300 000 filas) costaría ~300 000 lecturas aleatorias, frente a **80 000** del recorrido completo. Con la fórmula: bfr = 10 M/80 000 = 125 → el índice compensa si `k/r < 1/125 = 0,8 %`; el 3 % **supera** el 0,8 %, así que el recorrido completo es más barato. Reconstruir (C) no mejora el CF (ver P7) y un bitmap (D) no sirve para una recuperación por ROWID.
+
+> **Reto profesional · Dibuja la curva del punto de equilibrio (escala log) y explica por qué los tres puntos no coinciden.**
+>
+> Curva medida (lecturas lógicas; tabla entera = 5232, `o` = índice CF bueno, `x` = índice CF malo, `-` = tabla entera, `+` = cruce):
+>
+> ```
+>          |           x
+>  5e+05   |
+>          |          x
+>          |         x
+>          |        x
+>  4e+04   |       x
+>          |      x
+>          |
+>          |-----*-----+      <- tabla entera (5232)
+>  3e+03   |    x     o
+>          |   x     o
+>          |  x     o
+>          | x     o
+>  2e+02   |
+>          |x     o           <- el malo (x) ya supera a la tabla hacia 1%
+>          |     o
+>          |    o
+>  1e+01   |   o
+>          |  o
+>          |oo                <- el bueno (o) sigue muy por debajo
+>  1e+00   |
+>          +----------
+>           .0  .1  .5  2  10  50
+>           k% (escala log)
+> ```
+>
+> **Por qué los tres puntos no coinciden (tres líneas):**
+> 1. El **CF malo** cruza la línea de la tabla pronto (~1 %) y el **CF bueno** casi nunca (~100 %): es el mismo tipo de índice, pero el CF bueno lee bloques **consecutivos** (≈ k/bfr) y el malo salta a un bloque **distinto por fila** (≈ k).
+> 2. El **optimizador** cambia aún más temprano (0,1–0,2 %) porque su modelo de coste valora la lectura **aleatoria ~5×** la multibloque (`c_sec/c_aleat = 1/5`), no usa el recuento crudo de lecturas lógicas.
+> 3. Por eso los tres puntos son distintos: el cruce del índice malo (~1 %, lecturas crudas), el del bueno (~100 %) y el del optimizador (~0,11 %, ponderado a disco) difieren por el **orden físico de las filas** (agrupamiento) y por el **peso del coste** del acceso aleatorio.
