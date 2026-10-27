@@ -1,0 +1,45 @@
+
+Session altered.
+
+
+Index created.
+
+
+Index created.
+
+=== ANTES (rota): funciones sobre la columna + OR ===
+PR rota 		       filas=	 981  lecturas l??gicas=   1487  f??sicas=    0     25.6 ms
+			       plan: TABLE ACCESS FULL CLIENTE
+
+PL/SQL procedure successfully completed.
+
+=== DESPUES (reescribir): rango de prefijo en telefono + columna desnuda en apellidos ===
+PR reescrita		       filas=	 981  lecturas l??gicas=    722  f??sicas=    0        3 ms
+			       plan: TABLE ACCESS BY INDEX ROWID BATCHED CLIENTE > BITMAP CONVERSION TO ROWIDS > BITMAP OR > BITMAP CONVERSION FROM ROWIDS > SORT ORDER BY > INDEX RANGE SCAN IX_CLI_TEL
+EFONO > BITMAP CONVERSION FROM ROWIDS > INDEX RANGE SCAN IX_CLI_APELLIDOS
+
+PL/SQL procedure successfully completed.
+
+=== nota: apellidos guarda DOS palabras ('Gonzalez Gil'); UPPER(apellidos)='GIL' no casa con nada ===
+
+FILAS_APELLIDOS_GIL
+-------------------
+		  0
+
+
+FILAS_TELEFONO_600
+------------------
+	       981
+
+=== limpieza ===
+
+Index dropped.
+
+
+Index dropped.
+
+
+INDICES_TIENDASUR
+-----------------
+		7
+

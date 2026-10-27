@@ -1,0 +1,25 @@
+
+
+
+===== Paso 0: checkpoint para partir de una caché sin bloques sucios =====
+
+
+
+===== Paso 1: UPDATE de las 20 000 filas (sin cambiar el valor) y COMMIT =====
+
+
+
+===== Paso 2: ALTER SYSTEM CHECKPOINT: DBWn vuelca los bloques sucios a los datafiles =====
+
+
+
+
+===== Resultado: lo que cambió en cada paso =====
+
+PASO				      REDO_KB ESCRITURAS_LGWR	COMMITS_ BLOQUES_DBWN BLOQUES_SUCIOS_TABLA
+---------------------------------- ---------- --------------- ---------- ------------ --------------------
+0. Punto de partida											 0
+1. UPDATE 20 000 filas + COMMIT 	 8161		    7	       1	    0		       231
+2. ALTER SYSTEM CHECKPOINT		   14		    1	       0	  614			 0
+(Las cifras son de TODA la instancia (V$SYSSTAT): incluyen trabajo de fondo y la limpieza diferida de bloques de partes anteriores.
+Varían de una ejecución a otra; lo que no cambia es el patrón: COMMIT mueve redo con LGWR y el CHECKPOINT mueve bloques con DBWn)

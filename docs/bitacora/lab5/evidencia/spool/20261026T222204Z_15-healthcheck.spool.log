@@ -1,0 +1,73 @@
+SQL Format Cleared
+
+== 1. Disponibilidad ==
+
+COMPROBACION                       VALOR                                   
+---------------------------------- ----------------------------------------
+Instancia                          OPEN desde 2026-10-26 22:17             
+Base de datos                      READ WRITE · ARCHIVELOG                 
+PDB FREEPDB1                       READ WRITE                              
+
+== 2. Espacio: tablespaces por encima del 80 % (vacío = bien) ==
+
+== 3. Recuperabilidad: FRA y último archivado ==
+
+COMPROBACION                       VALOR                                   
+---------------------------------- ----------------------------------------
+FRA usada                          546 de 4096 MB (13.3 %)                 
+Último redo archivado              2026-10-26 22:18                        
+Copias del control file            3                                       
+Grupos de redo con 1 solo miembro  0                                       
+
+== 4. Capacidad: uso frente a límites de la instancia (v$resource_limit) ==
+
+RESOURCE_NAME               AHORA     MAXIMO LIMITE    
+---------------------- ---------- ---------- ----------
+processes                     101        103        200
+sessions                      131        132        322
+transactions                    0          0  UNLIMITED
+
+== 5. Errores ORA- en el alert log en las últimas 24 h (v$diag_alert_ext) ==
+
+CUANDO      MENSAJE                                                                                   
+----------- ------------------------------------------------------------------------------------------
+10-26 22:18 ORA-01113: file 26 needs media recovery                                                   
+10-26 22:18 ORA-01113: file 26 needs media recovery                                                   
+10-26 22:18 ORA-01110: data file 16: '/opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf'               
+10-26 22:18 ORA-63999: data file suffered media failure                                               
+10-26 22:17 ORA-00800: soft external error, arguments: [Set Priority Failed], [LGWR], [Check traces an
+10-26 22:17 ORA-00800: soft external error, arguments: [Set Priority Failed], [VKTM], [Check traces an
+10-26 22:16 ORA-00800: soft external error, arguments: [Set Priority Failed], [LGWR], [Check traces an
+10-26 22:16 ORA-00800: soft external error, arguments: [Set Priority Failed], [VKTM], [Check traces an
+10-26 22:11 ORA-00202: control file: '/opt/oracle/oradata/FREE/control03.ctl'                         
+10-26 22:11 ORA-205 signalled during: ALTER DATABASE   MOUNT...                                       
+
+== 6. Cambios de log por hora en las últimas 24 h (muchos = redo pequeño o carga alta) ==
+
+HORA         CAMBIOS
+--------- ----------
+10-26 20h          2
+10-26 21h         15
+10-26 22h          2
+
+== 7. Copias de seguridad RMAN: las últimas (vacío = NO hay copias: alarma) ==
+
+INICIO      INPUT_TYPE     STATUS             MB   SEGUNDOS
+----------- -------------- ---------- ---------- ----------
+10-26 22:18 DATAFILE FULL  COMPLETED          38          4
+
+== 8. Índices que piden atención (no válidos, invisibles olvidados, o con muchas hojas para sus filas) ==
+
+OWNER            PROBLEMA                          INDICES EJEMPLO                 
+---------------- ------------------------------ ---------- ------------------------
+ADMIN_CLINICA    sin estadísticas                        8 IDX_CLI_CITAS_FECHA     
+ADMIN_FINTECH    sin estadísticas                        6 IDX_FIN_TX_DESTINO      
+ADMIN_LOGISTICA  sin estadísticas                        6 IDX_LOG_EVENTOS_ENVIO   
+ADMIN_RETAIL     sin estadísticas                        7 IDX_RET_DETALLE_PROD    
+("sin estadísticas" en esquemas vacíos es esperable; en uno con datos, el optimizador trabaja a ciegas: DBMS_STATS)
+
+== 9. Undo: errores de "snapshot too old" (ORA-01555) o falta de espacio en las últimas 24 h (0 y 0 = bien) ==
+
+ ORA_01555 SIN_ESPACIO_UNDO CONSULTA_MAS_LARGA_S
+---------- ---------------- --------------------
+         0                0                    0

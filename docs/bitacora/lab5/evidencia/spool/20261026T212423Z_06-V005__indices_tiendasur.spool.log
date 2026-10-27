@@ -1,0 +1,42 @@
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+
+Index created.
+
+
+Index created.
+
+
+Index dropped.
+
+
+Table altered.
+
+
+Index created.
+
+
+Index created.
+
+
+Index dropped.
+
+
+TABLE_NA INDEX_NAME	      UNIQUENES VISIBILIT
+-------- -------------------- --------- ---------
+CLIENTE  IX_CLI_PAIS_CIUDAD   NONUNIQUE VISIBLE
+CLIENTE  PK_CLIENTE	      UNIQUE	VISIBLE
+CLIENTE  UX_CLI_DNI	      UNIQUE	VISIBLE
+CLIENTE  UX_CLI_EMAIL	      UNIQUE	VISIBLE
+PEDIDO	 IX_PED_CLI_FEC_CUB   NONUNIQUE VISIBLE
+PEDIDO	 IX_PED_CP	      NONUNIQUE VISIBLE
+PEDIDO	 IX_PED_FECHA	      NONUNIQUE VISIBLE
+PEDIDO	 IX_PED_PENDIENTES    NONUNIQUE VISIBLE
+PEDIDO	 PK_PEDIDO	      UNIQUE	VISIBLE
+
+9 rows selected.
+

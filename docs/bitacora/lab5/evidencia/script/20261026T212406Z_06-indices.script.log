@@ -1,0 +1,143 @@
+
+===== Escenario: hoy =====
+
+INDICES_EN_PEDIDO INDICES
+----------------- --------------------------------------------------------------------------------------------------------------
+                4 IX_PED_CLIENTE, IX_PED_FECHA, IX_PED_IMPORTE, PK_PEDIDO
+hoy: 2000 INSERT               filas=  2000  lecturas l??gicas=  30410  bloques modificados= 20251  redo=  2549 KB    88.9 ms  | por fila: 10.1 bloques, 1305 bytes de redo
+hoy: 2000 UPDATE estado        filas=  2000  lecturas l??gicas=   8046  bloques modificados=  4023  redo=   515 KB    26.4 ms  | por fila: 2 bloques, 264 bytes de redo
+hoy: 2000 UPDATE importe       filas=  2000  lecturas l??gicas=  20140  bloques modificados= 12070  redo=  1472 KB    49.2 ms  | por fila: 6 bloques, 754 bytes de redo
+hoy: 2000 DELETE               filas=  2000  lecturas l??gicas=  32312  bloques modificados= 20174  redo=  2433 KB    66.7 ms  | por fila: 10.1 bloques, 1246 bytes de redo
+Propuesta del compañero creada: 5 índices más sobre PEDIDO
+
+===== Escenario: compañero =====
+
+INDICES_EN_PEDIDO INDICES
+----------------- --------------------------------------------------------------------------------------------------------------
+                9 IX_PED_CANAL, IX_PED_CLIENTE, IX_PED_CLI_FEC, IX_PED_CP, IX_PED_ESTADO, IX_PED_FECHA, IX_PED_FEC_CLI,
+                  IX_PED_IMPORTE, PK_PEDIDO
+
+compa??ero: 2000 INSERT        filas=  2000  lecturas l??gicas=  60841  bloques modificados= 40449  redo=  5042 KB   134.6 ms  | por fila: 20.2 bloques, 2581 bytes de redo
+compa??ero: 2000 UPDATE estado filas=  2000  lecturas l??gicas=  20153  bloques modificados= 12075  redo=  1417 KB    37.7 ms  | por fila: 6 bloques, 726 bytes de redo
+compa??ero: 2000 UPDATE import filas=  2000  lecturas l??gicas=  20153  bloques modificados= 12074  redo=  1472 KB      51 ms  | por fila: 6 bloques, 754 bytes de redo
+compa??ero: 2000 DELETE        filas=  2000  lecturas l??gicas=  62584  bloques modificados= 40298  redo=  4734 KB   212.9 ms  | por fila: 20.1 bloques, 2424 bytes de redo
+
+===== Pregunta 1 · NECESIDAD: ¿qué índices usa de verdad la carga habitual? (MONITORING USAGE) =====
+-- La carga habitual de TiendaSur (Q2, Q3, Q7, Q8, Q9, Q12), ya reescrita para ser sargable:
+Q2 ??ltimo mes                 filas=  26582  lecturas l??gicas=    333  f??sicas=    0     12.8 ms
+                               plan: TABLE ACCESS BY INDEX ROWID BATCHED PEDIDO > INDEX RANGE SCAN IX_PED_FECHA
+Q3 c??digo postal              filas=    102  lecturas l??gicas=    106  f??sicas=    0       .6 ms
+                               plan: TABLE ACCESS BY INDEX ROWID BATCHED PEDIDO > INDEX RANGE SCAN IX_PED_CP
+Q7 historial                   filas=      4  lecturas l??gicas=      7  f??sicas=    0       .6 ms
+                               plan: TABLE ACCESS BY INDEX ROWID PEDIDO > INDEX RANGE SCAN DESCENDING IX_PED_CLI_FEC
+Q8 contador                    filas=      1  lecturas l??gicas=    739  f??sicas=    0     16.7 ms
+                               plan: SORT AGGREGATE > INDEX RANGE SCAN IX_PED_FECHA
+Q9 ??ltimos 20                 filas=     20  lecturas l??gicas=     19  f??sicas=    0       .5 ms
+                               plan: COUNT STOPKEY > VIEW > TABLE ACCESS BY INDEX ROWID PEDIDO > INDEX FULL SCAN DESCENDING IX_PED_FECHA
+Q12 pendientes                 filas=  20000  lecturas l??gicas=    147  f??sicas=    0     23.4 ms
+                               plan: SORT ORDER BY > TABLE ACCESS BY INDEX ROWID BATCHED PEDIDO > INDEX RANGE SCAN IX_PED_ESTADO
+
+INDEX_NAME       USA MON
+---------------- --- ---
+IX_PED_CANAL     NO  YES
+IX_PED_CLIENTE   NO  YES
+IX_PED_FEC_CLI   NO  YES
+IX_PED_IMPORTE   NO  YES
+IX_PED_CLI_FEC   YES YES
+IX_PED_CP        YES YES
+IX_PED_ESTADO    YES YES
+IX_PED_FECHA     YES YES
+(En producción la ventana de observación es de semanas, no de minutos: cierres de mes, informes trimestrales...
+23ai mantiene además DBA_INDEX_USAGE de forma automática, con un retraso de unos 15 minutos)
+
+===== Pregunta 2 · VIABILIDAD: ¿la selectividad cae por debajo del punto de equilibrio (~0,5 % en PEDIDO)? =====
+
+INDEX_NAME           CLAVES PCT_POR_VALOR_MEDIO VEREDICTO
+---------------- ---------- ------------------- ------------------------------------------------------------------------
+IX_PED_CANAL              3              33.333 NO viable para igualdad: cada valor es m??s del 0,5 % de la tabla
+IX_PED_ESTADO             4                  25 NO viable para igualdad: cada valor es m??s del 0,5 % de la tabla
+IX_PED_CP             11000                .009 viable
+IX_PED_IMPORTE        49908                .002 viable
+IX_PED_CLIENTE       100816                .001 viable
+IX_PED_FECHA         997696                   0 viable
+PK_PEDIDO           1000000                   0 viable
+IX_PED_CLI_FEC      1000000                   0 viable
+IX_PED_FEC_CLI      1000000                   0 viable
+(estado tiene 4 valores: solo 'P' (2 %) sería interesante, y eso lo resuelve mejor un índice PARCIAL; canal, nunca)
+
+===== Pregunta 3 · ESCRITURA: cada índice suma unos 2 bloques modificados por INSERT (la hoja y su undo) =====
+(Ver la medida de 06-medir-dml.sql en cada escenario: "por fila: N bloques" ~ 2 de la tabla + 2 por índice)
+
+===== Pregunta 4 · REDUNDANCIA: índices cuyas columnas son el prefijo izquierdo de otro =====
+
+REDUNDANTE       COLUMNAS                                     CUBIERTO_POR     COLUMNAS_DEL_OTRO
+---------------- -------------------------------------------- ---------------- --------------------------------------------
+IX_PED_CLIENTE   ID_CLIENTE                                   IX_PED_CLI_FEC   ID_CLIENTE, FECHA_PEDIDO
+IX_PED_FECHA     FECHA_PEDIDO                                 IX_PED_FEC_CLI   FECHA_PEDIDO, ID_CLIENTE
+(Un índice único NO es redundante aunque sea prefijo: garantiza una regla de negocio. Y la clave ajena id_cliente
+necesita un índice que EMPIECE por id_cliente, o cada DELETE de un cliente bloquea PEDIDO entero)
+
+===== Pregunta 5 · CICLO DE VIDA: antes de borrar, hacerlo INVISIBLE y observar =====
+
+INDEX_NAME       VISIBILIT STATUS
+---------------- --------- --------
+IX_PED_IMPORTE   INVISIBLE VALID
+Q2 sin ix_ped_importe          filas=  26582  lecturas l??gicas=    333  f??sicas=    0     10.3 ms
+                               plan: TABLE ACCESS BY INDEX ROWID BATCHED PEDIDO > INDEX RANGE SCAN IX_PED_FECHA
+(Invisible: el optimizador lo ignora pero Oracle lo sigue manteniendo. Si algo empeora, ALTER INDEX ... VISIBLE en un segundo,
+sin reconstruir nada. Si en la ventana de observación nadie lo echa de menos, se borra por migración: V005)
+Propuesta del compañero retirada
+>> Aplicando V005__indices_tiendasur
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+
+Index created.
+
+
+Index created.
+
+
+Index dropped.
+
+
+Table altered.
+
+
+Index created.
+
+
+Index created.
+
+
+Index dropped.
+
+
+TABLE_NA INDEX_NAME	      UNIQUENES VISIBILIT
+-------- -------------------- --------- ---------
+CLIENTE  IX_CLI_PAIS_CIUDAD   NONUNIQUE VISIBLE
+CLIENTE  PK_CLIENTE	      UNIQUE	VISIBLE
+CLIENTE  UX_CLI_DNI	      UNIQUE	VISIBLE
+CLIENTE  UX_CLI_EMAIL	      UNIQUE	VISIBLE
+PEDIDO	 IX_PED_CLI_FEC_CUB   NONUNIQUE VISIBLE
+PEDIDO	 IX_PED_CP	      NONUNIQUE VISIBLE
+PEDIDO	 IX_PED_FECHA	      NONUNIQUE VISIBLE
+PEDIDO	 IX_PED_PENDIENTES    NONUNIQUE VISIBLE
+PEDIDO	 PK_PEDIDO	      UNIQUE	VISIBLE
+
+9 rows selected.
+
+>> Migraciones aplicadas. Evidencias en docs/bitacora/lab5/evidencia/spool/
+
+===== Escenario: V005 =====
+
+INDICES_EN_PEDIDO INDICES
+----------------- --------------------------------------------------------------------------------------------------------------
+                5 IX_PED_CLI_FEC_CUB, IX_PED_CP, IX_PED_FECHA, IX_PED_PENDIENTES, PK_PEDIDO
+V005: 2000 INSERT              filas=  2000  lecturas l??gicas=  34402  bloques modificados= 24217  redo=  3144 KB    83.5 ms  | por fila: 12.1 bloques, 1610 bytes de redo
+V005: 2000 UPDATE estado       filas=  2000  lecturas l??gicas=  24219  bloques modificados= 16105  redo=  2020 KB      78 ms  | por fila: 8.1 bloques, 1034 bytes de redo
+V005: 2000 UPDATE importe      filas=  2000  lecturas l??gicas=  20171  bloques modificados= 12083  redo=  1586 KB    45.6 ms  | por fila: 6 bloques, 812 bytes de redo
+V005: 2000 DELETE              filas=  2000  lecturas l??gicas=  32374  bloques modificados= 20197  redo=  2490 KB    64.9 ms  | por fila: 10.1 bloques, 1275 bytes de redo

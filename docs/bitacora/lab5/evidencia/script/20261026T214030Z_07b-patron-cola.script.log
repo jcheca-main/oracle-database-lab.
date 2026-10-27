@@ -1,0 +1,19 @@
+
+===== 1. La cola trabaja: entran 200 000 mensajes, se procesan (y borran) los 150 000 más antiguos, entran 50 000 más =====
+
+MENSAJES_VIVOS    PRIMERO     ULTIMO
+-------------- ---------- ----------
+        100000     150001     250000
+
+===== 2. El síntoma: "dame el siguiente mensaje" (el más antiguo) lee de más =====
+siguiente mensaje (cola)       filas=      1  lecturas l??gicas=    238  f??sicas=    0      1.8 ms
+                               plan: COUNT STOPKEY > VIEW > INDEX FULL SCAN IX_COLA
+siguiente mensaje (sano)       filas=      1  lecturas l??gicas=      2  f??sicas=    0       .2 ms
+                               plan: COUNT STOPKEY > VIEW > INDEX FULL SCAN IX_CRECIENTE
+(El índice de la cola baja hasta la hoja más a la izquierda y la encuentra VACÍA, y la siguiente, y la siguiente...)
+
+===== 3. Lo que dice INDEX_STATS (VALIDATE STRUCTURE): entradas borradas que siguen ocupando sitio =====
+
+INDEX_NAME     ALTURA      HOJAS   ENTRADAS   BORRADAS PCT_BORRADAS   PCT_USED   MB_ARBOL
+---------- ---------- ---------- ---------- ---------- ------------ ---------- ----------
+IX_COLA             2        437     175253      75253           43         80        3.3

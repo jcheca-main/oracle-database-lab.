@@ -1,0 +1,26 @@
+
+
+
+
+
+
+
+===== TIENDASUR.PK_PEDIDO · resumen (hoja útil = 7996 bytes en bloque de 8 KB) =====
+
+     HOJAS ENTRADAS_VIVAS ENTRADAS_BORRADAS MEDIA_ENTRADAS_POR_HOJA PCT_OCUPACION_VIVA PCT_ESPACIO_USADO HOJAS_VACIAS HOJAS_BAJO_50PCT
+---------- -------------- ----------------- ----------------------- ------------------ ----------------- ------------ ----------------
+      1875        1000000                 0                     533               99.9              99.9            0                0
+
+===== Histograma: cuántas hojas hay en cada tramo de llenado (solo entradas vivas) =====
+
+RANGO          HOJAS OCUPACION
+--------- ---------- ----------------------------------------------------
+ 90-99 %        1875 ##################################################
+
+===== Mapa de izquierda (claves bajas) a derecha (claves altas): 64 tramos de hojas consecutivas =====
+Leyenda por ocupación media del tramo:  ' ' <10 %   . <30 %   : <50 %   - <70 %   = <90 %   # >=90 %
+
+MAPA
+------------------------------------------------------------------
+[################################################################]
+Pista para leer el mapa: si la izquierda está vacía y la derecha llena, es un PATRÓN COLA (se inserta por la derecha y se borra por la izquierda)

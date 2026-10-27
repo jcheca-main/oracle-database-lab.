@@ -1,0 +1,60 @@
+Archivo víctima: n.º 16, /opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf
+== 1. Copia de seguridad RMAN del tablespace (va a la FRA) ==
+Starting backup at 26-OCT-26
+piece handle=/opt/oracle/oradata/fra/FREE/55E54F210F100828E0630B00580ADFD0/backupset/2026_10_26/o1_mf_nnndf_LAB5_SIMULACRO_D_ofznf5c4_.bkp tag=LAB5_SIMULACRO_D comment=NONE
+Finished backup at 26-OCT-26
+piece handle=/opt/oracle/oradata/fra/FREE/autobackup/2026_10_26/o1_mf_s_1247696294_ofznf6q5_.bkp comment=NONE
+== 2. Un cambio confirmado DESPUÉS de la copia (la copia no lo tiene: solo está en el redo) ==
+104 -> EGRESADO (confirmado tras la copia)
+== 3. Se rompe el disco: el datafile desaparece ==
+== 4. Diagnóstico: la consulta falla y el alert log dice qué archivo y por qué ==
+SELECT COUNT(*) FROM admin_academia.aca_estudiantes
+                                    *
+ERROR at line 1:
+ORA-01116: error in opening database file 16
+ORA-01110: data file 16: '/opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf'
+ORA-27041: unable to open file
+Linux-x86_64 Error: 2: No such file or directory
+Additional information: 3
+Help: https://docs.oracle.com/error-help/db/ora-01116/
+
+
+Linux-x86_64 Error: 2: No such file or directory
+ORA-01110: data file 16: '/opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf'
+Linux-x86_64 Error: 2: No such file or directory
+== 5. Reparación: el archivo fuera de línea, RESTORE, RECOVER y otra vez en línea ==
+  Estado de FREEPDB1 antes de reparar: MOUNTED
+  Oracle cerró la PDB al detectar el fallo de medio (alert log: ORA-63999): se repara con la PDB montada y después se abre
+  Estado de FREEPDB1 al empezar la reparación: MOUNTED
+Starting restore at 26-OCT-26
+channel ORA_DISK_1: restoring datafile 00016 to /opt/oracle/oradata/FREE/FREEPDB1/academia01.dbf
+Finished restore at 26-OCT-26
+Starting recover at 26-OCT-26
+media recovery complete, elapsed time: 00:00:00
+Finished recover at 26-OCT-26
+
+Session altered.
+
+
+Database altered.
+
+  FREEPDB1 está MOUNTED: se abre de nuevo
+
+Pluggable database altered.
+
+  Estado de FREEPDB1 tras reparar: READ WRITE
+== 6. ¿Sobrevivió el cambio posterior a la copia? ==
+
+ESTUDIANTE_ID ESTADO
+------------- --------------------
+	  104 EGRESADO
+(EGRESADO = RECOVER aplicó el redo archivado posterior a la copia: RPO = 0, no se perdió nada)
+Devolvemos la fila 104 a ACTIVO para que el laboratorio se pueda repetir
+
+ESTUDIANTES
+-----------
+      20000
+== 7. Métricas del simulacro ==
+  RPO (datos perdidos): 0 (copia + redo archivado + redo en línea)
+  RTO (archivo fuera de línea -> en línea): 11 s; desde el fallo: 11 s
+  Si la PDB siguió abierta, solo TBS_ACADEMIA estuvo inaccesible; si Oracle la cerró (ORA-63999), toda FREEPDB1 lo estuvo: el RTO lo refleja

@@ -1,0 +1,19 @@
+
+Session altered.
+
+=== 1. Filas por bloque fisico de PEDIDO (min, media, max) ===
+
+BLOQUES_REALES	MIN_FILAS  AVG_FILAS  MAX_FILAS
+-------------- ---------- ---------- ----------
+	  5220		2      191.6	    200
+
+1 row selected.
+
+=== 2. Comparacion con el bfr teorico NUM_ROWS / BLOCKS ===
+
+  NUM_ROWS     BLOCKS BFR_TEORICO
+---------- ---------- -----------
+   1000000	 5320	      188
+
+1 row selected.
+

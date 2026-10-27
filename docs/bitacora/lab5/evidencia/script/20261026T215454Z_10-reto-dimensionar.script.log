@@ -1,0 +1,23 @@
+==== cambios de log por hora (v$log_history) ====
+
+HORA	  CAMBIOS
+------ ----------
+11		1
+12		1
+13		1
+19		1
+20		2
+21		9
+==== tamano actual de grupo y total de redo por hilo ====
+
+    GRUPOS MB_POR_GRUPO
+---------- ------------
+	 3	    600
+==== redo generado por hora (v$sysstat, en bloques de 512 B) ====
+==== ultimo cambio de log y su hora ====
+
+ SEQUENCE# INICIO
+---------- -------------------
+	15 2026-10-26 21:54:09
+	14 2026-10-26 21:40:48
+	13 2026-10-26 21:40:37

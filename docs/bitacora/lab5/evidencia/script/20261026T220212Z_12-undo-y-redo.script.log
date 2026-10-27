@@ -1,0 +1,13 @@
+
+===== 1. INSERT, UPDATE y DELETE de 10 000 pedidos: undo que dejan y redo que generan =====
+INSERT 10 000 filas    bloques de undo =   148 (  1184 KB) | redo total =   4965 KB, del cual describe el undo =   2050 KB
+   y su ROLLBACK       redo generado al deshacer = 444 KB
+UPDATE 10 000 filas    bloques de undo =    71 (   568 KB) | redo total =   1260 KB, del cual describe el undo =    540 KB
+   y su ROLLBACK       redo generado al deshacer = 751 KB
+DELETE 10 000 filas    bloques de undo =   431 (  3448 KB) | redo total =   7184 KB, del cual describe el undo =   3299 KB
+   y su ROLLBACK       redo generado al deshacer = 4732 KB
+
+INSERT: el undo solo guarda "borra este ROWID" -> poco undo.   DELETE: guarda la fila ENTERA (y sus entradas de índice) -> mucho.
+UPDATE: guarda el valor anterior de las columnas cambiadas.     Y TODO cambio en el undo se protege con redo:
+si la instancia cae, la recuperación primero rehace (redo, también el del undo) y después deshace lo no confirmado (undo).
+El ROLLBACK no es gratis: deshacer es aplicar cambios, y esos cambios también generan redo.

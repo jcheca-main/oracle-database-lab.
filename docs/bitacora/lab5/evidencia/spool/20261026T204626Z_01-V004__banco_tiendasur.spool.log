@@ -1,0 +1,72 @@
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+
+Tablespace created.
+
+
+User created.
+
+
+Session altered.
+
+
+Table created.
+
+
+Table created.
+
+
+100000 rows created.
+
+
+Commit complete.
+
+
+1000000 rows created.
+
+
+Commit complete.
+
+
+Index created.
+
+
+Index created.
+
+
+Index created.
+
+
+Index created.
+
+
+Index created.
+
+
+Table altered.
+
+
+PL/SQL procedure successfully completed.
+
+
+TABLE_NAME   NUM_ROWS	  BLOCKS AVG_ROW_LEN	    BFR
+---------- ---------- ---------- ----------- ----------
+CLIENTE        100000	    1517	 102	     66
+PEDIDO	      1000000	    5320	  32	    188
+
+2 rows selected.
+
+
+E    PEDIDOS	    PCT
+- ---------- ----------
+C     901993	   90.2
+D      28007	    2.8
+E      50000	      5
+P      20000	      2
+
+4 rows selected.
+
