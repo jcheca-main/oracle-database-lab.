@@ -1,0 +1,100 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T18:01:30Z origen=07-objetos
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7430977
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+== 1. Montaje: una copia de la tabla, dos vistas y una función que dependen de ella ==
+
+Table created.
+
+
+Index created.
+
+
+View created.
+
+
+View created.
+
+
+Function created.
+
+
+OBJECT_NAME	     OBJECT_TYP STATUS
+-------------------- ---------- -------
+F_TOTAL_ACTIVOS_LAB6 FUNCTION	VALID
+V_ACTIVOS_LAB6	     VIEW	VALID
+V_CONTACTO_LAB6      VIEW	VALID
+== 2. Columna nueva que nadie usa: Oracle NO invalida nada (dependencia de grano fino) ==
+
+OBJECT_NAME	     OBJECT_TYP STATUS
+-------------------- ---------- -------
+F_TOTAL_ACTIVOS_LAB6 FUNCTION	VALID
+V_ACTIVOS_LAB6	     VIEW	VALID
+V_CONTACTO_LAB6      VIEW	VALID
+== 3. Se amplía email_institucional (solo la usa V_CONTACTO_LAB6) ==
+
+OBJECT_NAME	     OBJECT_TYP STATUS
+-------------------- ---------- -------
+F_TOTAL_ACTIVOS_LAB6 FUNCTION	VALID
+V_ACTIVOS_LAB6	     VIEW	VALID
+V_CONTACTO_LAB6      VIEW	INVALID
+== 4. Se amplía nombres (la usa V_ACTIVOS_LAB6... y la función, en cascada) ==
+
+OBJECT_NAME	     OBJECT_TYP STATUS
+-------------------- ---------- -------
+F_TOTAL_ACTIVOS_LAB6 FUNCTION	INVALID
+V_ACTIVOS_LAB6	     VIEW	INVALID
+V_CONTACTO_LAB6      VIEW	INVALID
+-- La cadena de dependencias que explica la cascada
+
+NAME		       TYPE	 REFERENCED_NAME  REFERENCED_TYPE
+---------------------- --------- ---------------- ---------------
+F_TOTAL_ACTIVOS_LAB6   FUNCTION  V_ACTIVOS_LAB6   VIEW
+V_ACTIVOS_LAB6	       VIEW	 ACA_EST_LAB6	  TABLE
+V_CONTACTO_LAB6        VIEW	 ACA_EST_LAB6	  TABLE
+== 5. Un usuario llama a la función: Oracle la recompila sola (en SU llamada, en hora punta) ==
+
+   ACTIVOS
+----------
+     17600
+
+OBJECT_NAME	     OBJECT_TYP STATUS
+-------------------- ---------- -------
+F_TOTAL_ACTIVOS_LAB6 FUNCTION	VALID
+V_ACTIVOS_LAB6	     VIEW	VALID
+V_CONTACTO_LAB6      VIEW	INVALID
+== 6. El DBA no espera a que un usuario tropiece: recompila el esquema ANTES de abrir el servicio ==
+
+OBJECT_NAME	     OBJECT_TYP STATUS
+-------------------- ---------- -------
+F_TOTAL_ACTIVOS_LAB6 FUNCTION	VALID
+V_ACTIVOS_LAB6	     VIEW	VALID
+V_CONTACTO_LAB6      VIEW	VALID
+== 7. Índices UNUSABLE: un MOVE de la tabla cambia los ROWID y deja el índice inservible, sin dar error ==
+
+INDEX_NAME	   STATUS
+------------------ --------
+IX_EST_LAB6_ESTADO UNUSABLE
+
+INDEX_NAME	   STATUS
+------------------ --------
+IX_EST_LAB6_ESTADO VALID
+== 8. Papelera: DROP sin PURGE no libera el espacio ==
+
+ORIGINAL_NAME	   OBJECT_NAME_BIN		    TYPE	      MB
+------------------ -------------------------------- --------- ----------
+IX_EST_LAB6_ESTADO BIN$YQqAE4erFYngYwIAEawptw==$0   INDEX	      .5
+ACA_EST_LAB6	   BIN$YQqAE4esFYngYwIAEawptw==$0   TABLE	       2
+
+EN_PAPELERA
+-----------
+	  0
+== 9. Validación final: inválidos de los esquemas de negocio (debe ser 0) ==
+
+INVALIDOS_NEGOCIO
+-----------------
+		0

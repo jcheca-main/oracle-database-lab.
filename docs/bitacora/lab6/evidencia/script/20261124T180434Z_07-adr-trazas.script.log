@@ -1,0 +1,93 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T18:04:34Z origen=07-adr-trazas
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7431968
+== 1. Dónde está el ADR (V$DIAG_INFO) ==
+
+NAME		       VALUE
+---------------------- ----------------------------------------------------------------------
+ADR Base	       /opt/oracle
+ADR Home	       /opt/oracle/diag/rdbms/free/FREE
+Active Incident Count  40
+Active Problem Count   1
+Attention Log	       /opt/oracle/diag/rdbms/free/FREE/trace/attention_FREE.log
+Default Trace File     /opt/oracle/diag/rdbms/free/FREE/trace/FREE_ora_5729.trc
+Diag Alert	       /opt/oracle/diag/rdbms/free/FREE/alert
+Diag Cdump	       /opt/oracle/diag/rdbms/free/FREE/cdump
+Diag Enabled	       TRUE
+Diag Incident	       /opt/oracle/diag/rdbms/free/FREE/incident
+Diag Trace	       /opt/oracle/diag/rdbms/free/FREE/trace
+Health Monitor	       /opt/oracle/diag/rdbms/free/FREE/hm
+ORACLE_HOME	       /opt/oracle/product/26ai/dbhomeFree
+== 2. El alert log existe dos veces: en texto (trace/) y en XML (alert/), que es el que lee V$DIAG_ALERT_EXT ==
+-rw-r----- 1 oracle oinstall 1587354 Nov 24 17:58 alert/log.xml
+-rw-r----- 1 oracle oinstall  272777 Nov 24 17:58 trace/alert_FREE.log
+Trazas en trace/: 676
+== 3. Problemas e incidentes (un problema agrupa los incidentes del mismo error crítico) ==
+
+PROBLEM_ID PROBLEM_KEY			  PRIMERO	   ULTIMO
+---------- ------------------------------ ---------------- ----------------
+	 1 ORA 800			  2026-07-05 21:57 2026-11-24 17:21
+
+PROBLEM_ID INCIDENTES ERROR_NUMBER ERROR_ARG1
+---------- ---------- ------------ ------------------------
+	 1	   40	       800 Set Priority Failed
+== 4. ADRCI, si tu imagen lo incluye (la oficial de Oracle lo trae; algunas imágenes de la comunidad, no) ==
+ADR Homes: 
+diag/rdbms/free/FREE
+diag/tnslsnr/f49e437017b9/listener
+diag/tnslsnr/98899ce54eee/listener
+diag/clients/user_oracle/RMAN_2155040606_116
+diag/clients/user_oracle/RMAN_2463796700_116
+diag/orapwd/98899ce54eee/kuzr
+ADR Home = /opt/oracle/diag/rdbms/free/FREE:
+*************************************************************************
+PROBLEM_ID           PROBLEM_KEY                                                 LAST_INCIDENT        LASTINC_TIME                             
+-------------------- ----------------------------------------------------------- -------------------- ---------------------------------------- 
+1                    ORA 800                                                     30599                2026-11-24 17:21:16.329000 +00:00       
+1 row fetched
+ADR Home = /opt/oracle/diag/rdbms/free/FREE:
+*************************************************************************
+ADRID                SHORTP_POLICY        LONGP_POLICY         LAST_MOD_TIME                            LAST_AUTOPRG_TIME                        LAST_MANUPRG_TIME                        ADRDIR_VERSION       ADRSCHM_VERSION      ADRSCHMV_SUMMARY     ADRALERT_VERSION     CREATE_TIME                              SIZEP_POLICY         PURGE_PERIOD         FLAGS                PURGE_THRESHOLD      
+-------------------- -------------------- -------------------- ---------------------------------------- ---------------------------------------- ---------------------------------------- -------------------- -------------------- -------------------- -------------------- ---------------------------------------- -------------------- -------------------- -------------------- -------------------- 
+3311357041           504                  504                  2026-07-05 21:57:42.886424 +00:00                                                                                          1                    2                    116                  1                    2026-07-05 21:57:42.886424 +00:00        18446744073709551615 0                    0                    95                  
+1 row fetched
+== 5. Trazar la sesión de OTRO usuario sin pedirle nada ni reiniciar (DBMS_MONITOR) ==
+  Sesión 18,6790 · su traza irá a /opt/oracle/diag/rdbms/free/FREE/trace/FREE_ora_5767_lab6_app.trc
+
+PL/SQL procedure successfully completed.
+
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+   ACTIVOS
+----------
+     17600
+
+
+PL/SQL procedure successfully completed.
+
+-- Extracto de la traza en bruto (una línea de cada tipo) --
+PARSING IN CURSOR #127468486962272 len=34 dep=0 uid=154 oct=47 lid=154 tim=6849588557 hv=971730551 ad='77ef9900' sqlid='0s203pnwyqvmr'
+EXEC #127468486962272:c=13176,e=8005014,p=0,cr=283,cu=0,mis=1,r=1,dep=0,og=1,plh=0,tim=6849588502
+FETCH #127468486962272:c=0,e=2683,p=0,cr=247,cu=0,mis=0,r=1,dep=0,og=1,plh=3163684005,tim=6849811571
+WAIT #127468486962272: nam='PL/SQL lock timer' ela=7997568 duration=0 p2=0 p3=0 obj#=4294967295 tim=6849586968
+-- tkprof la convierte en un informe legible (solo la consulta de la aplicación) --
+SELECT COUNT(*) AS activos 
+FROM
+ admin_academia.aca_estudiantes WHERE estado = 'ACTIVO'
+
+
+call     count       cpu    elapsed       disk      query    current        rows
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+Parse        1      0.05       0.05          0          0          0           0
+Execute      1      0.00       0.00          0          0          0           0
+Fetch        2      0.00       0.00          0        247          0           1
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+total        4      0.05       0.05          0        247          0           1
+

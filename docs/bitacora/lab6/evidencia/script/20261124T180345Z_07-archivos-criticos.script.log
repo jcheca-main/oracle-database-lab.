@@ -1,0 +1,42 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T18:03:45Z origen=07-archivos-criticos
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7431933
+== EVIDENCIA alumno=E017 hora=2026-11-24T18:03:48Z origen=07-archivos-criticos
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7431940
+== 1. Control files (Lab 5, Parte J: tres copias) ==
+
+ARCHIVO              DONDE                                                          STATUS 
+-------------------- -------------------------------------------------------------- -------
+control file         /opt/oracle/oradata/FREE/control01.ctl                                
+control file         /opt/oracle/oradata/FREE/control02.ctl                                
+control file         /opt/oracle/oradata/FREE/control03.ctl                                
+== 2. Redo en línea: grupos y miembros (Lab 5, Parte K: dos miembros por grupo) ==
+
+    GROUP#  SEQUENCE#         MB    MEMBERS STATUS           ARC MEMBER                                      
+---------- ---------- ---------- ---------- ---------------- --- --------------------------------------------
+         1         25        200          2 INACTIVE         YES /opt/oracle/oradata/FREE/redo01.log         
+         1         25        200          2 INACTIVE         YES /opt/oracle/oradata/FREE/redo01b.log        
+         2         26        200          2 CURRENT          NO  /opt/oracle/oradata/FREE/redo02.log         
+         2         26        200          2 CURRENT          NO  /opt/oracle/oradata/FREE/redo02b.log        
+         3         24        200          2 INACTIVE         YES /opt/oracle/oradata/FREE/redo03.log         
+         3         24        200          2 INACTIVE         YES /opt/oracle/oradata/FREE/redo03b.log        
+== 3. SPFILE, password file y redo archivado ==
+
+ARCHIVO              DONDE                                                         
+-------------------- --------------------------------------------------------------
+spfile               /opt/oracle/product/26ai/dbhomeFree/dbs/spfileFREE.ora        
+password file        /opt/oracle/product/26ai/dbhomeFree/dbs/orapwFREE             
+FRA                  /opt/oracle/oradata/fra (632 de 4096 MB)                      
+
+LOG_MODE     ARCHIVADOS_EN_DISCO
+------------ -------------------
+ARCHIVELOG                    25
+== 4. ¿Hay copia RMAN reciente? (la del simulacro D del Lab 5) ==
+
+ULTIMA_PIEZA_RMA     PIEZAS
+---------------- ----------
+2026-11-24 17:51         10
+== 5. ¿Quién puede conectarse como SYS* por el password file? ==
+
+USERNAME     SYSDB SYSOP SYSBA SYSDG SYSKM ACCOUNT_STATUS                
+------------ ----- ----- ----- ----- ----- ------------------------------
+SYS          TRUE  TRUE  FALSE FALSE FALSE OPEN                          
