@@ -1,0 +1,30 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:25:36Z origen=03-cuenta-app
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7422898
+== En la raíz: ¿qué prefijo exige Oracle a los usuarios comunes? ==
+
+NAME		     VALUE
+-------------------- ------------
+common_user_prefix   C##
+
+1 row selected.
+
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+
+Grant succeeded.
+
+
+Grant succeeded.
+
+== La cuenta es LOCAL (COMMON = NO): solo existe en FREEPDB1 ==
+
+USERNAME       COMMON ACCOUNT_STATUS   DEFAULT_TABL AUTHENTICATION_TYPE
+-------------- ------ ---------------- ------------ -------------------
+APP_ACADEMIA   NO     OPEN	       USERS	    PASSWORD
+
+1 row selected.
+
