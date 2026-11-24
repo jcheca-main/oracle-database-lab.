@@ -4,6 +4,7 @@
 # Uso: bash scripts/ops/backup-estado.sh <etiqueta-en-kebab-case>     (p. ej.: lab3-final)
 set -euo pipefail
 source scripts/deployment/env/00-config.sh
+[ -f scripts/ops/cabecera.sh ] && { source scripts/ops/cabecera.sh "backup-estado-${1:-}" || exit 2; }   # Lab 6: cabecera de evidencia
 docker info > /dev/null 2>&1 || { echo "ERROR: Docker no responde (¿está arrancado Docker Desktop o el servicio docker?). No se ha tocado nada." >&2; exit 1; }
 
 ETIQUETA="${1:?Uso: backup-estado.sh <etiqueta, p. ej. lab3-final>}"
@@ -22,7 +23,7 @@ echo "Volumen: ${USADO} MB · libre en backups/: ${LIBRE} MB"
 [ "$LIBRE" -gt "$USADO" ] || { echo "Espacio insuficiente para la copia"; exit 1; }
 
 echo "== 2. Inventario de archivos (base abierta) =="
-docker exec -i "$CONT_NAME" sqlplus -s -L / as sysdba \
+docker exec -i -e NLS_LANG=AMERICAN_AMERICA.AL32UTF8 "$CONT_NAME" sqlplus -s -L / as sysdba \
   < scripts/ops/inventario-archivos.sql > "$DEST/inventario.txt"
 cat "$DEST/inventario.txt"
 
@@ -42,7 +43,7 @@ done
 trap 'echo "== Arranque del contenedor =="; docker start "$CONT_NAME" > /dev/null' EXIT
 
 echo "== 4. Parada limpia: SHUTDOWN IMMEDIATE y docker stop =="
-echo "SHUTDOWN IMMEDIATE" | docker exec -i "$CONT_NAME" sqlplus -s -L / as sysdba
+echo "SHUTDOWN IMMEDIATE" | docker exec -i -e NLS_LANG=AMERICAN_AMERICA.AL32UTF8 "$CONT_NAME" sqlplus -s -L / as sysdba
 docker stop -t 120 "$CONT_NAME" > /dev/null
 
 echo "== 5. Copia del volumen (tar + gzip, conservando dueños y permisos) =="

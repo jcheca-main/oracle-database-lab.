@@ -23,3 +23,5 @@ export HELPER_IMG="ubuntu:24.04"          # imagen auxiliar con GNU tar para cop
 export DATA_ROOT="/opt/oracle/oradata"    # punto de montaje del volumen dentro del contenedor
 export EVID_LAB4="docs/bitacora/lab4/evidencia"   # evidencia del Lab 4: script/, spool/, config/
 export EVID_LAB5="docs/bitacora/lab5/evidencia"   # evidencia del Lab 5: script/, spool/, config/
+export EVID_LAB6="docs/bitacora/lab6/evidencia"   # evidencia del Lab 6: script/, spool/, config/
+export SQLPATH="$(pwd)"              # Lab 6: SQLcl lee login.sql (tu código de alumno en el prompt) de la raíz del repositorio
