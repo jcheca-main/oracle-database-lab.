@@ -1,0 +1,49 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:37:40Z origen=04-diccionario
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7424614
+SQL Format Cleared
+== 1. Las tablas fijas X$ y las vistas V$ y GV$ que se apoyan en ellas (exponen estructuras de memoria de la instancia y datos del control file) ==
+
+     TOTAL   X_TABLAS   V_VISTAS  GV_VISTAS
+---------- ---------- ---------- ----------
+      3394       1591        921        880
+== 2. V$INSTANCE es GV$INSTANCE filtrada a ESTA instancia ==
+
+VIEW_DEFINITION
+------------------------------------------------------------------------------------------------------------------------
+select  INSTANCE_NUMBER, INSTANCE_NAME, HOST_NAME, VERSION, VERSION_LEGACY,VERSION_FULL, STARTUP_TIME, STATUS, PARALLEL,
+THREAD#, ARCHIVER, LOG_SWITCH_WAIT, LOGINS, SHUTDOWN_PENDING, DATABASE_STATUS, INSTANCE_ROLE, ACTIVE_STATE, BLOCKED,
+CON_ID, INSTANCE_MODE, EDITION, FAMILY, DATABASE_TYPE from GV$INSTANCE where inst_id = USERENV('Instance')
+
+== 3. Lo que escribes (V$SESSION, DBA_USERS) son sinónimos públicos ==
+
+OWNER    SYNONYM_NAME   TABLE_OW TABLE_NAME                    
+-------- -------------- -------- ------------------------------
+PUBLIC   DBA_USERS      SYS      DBA_USERS                     
+PUBLIC   V$SESSION      SYS      V_$SESSION                    
+== 4. ¿Qué vista me dice las cuotas? Primera trampa: DICTIONARY solo lista lo concedido a PUBLIC o a ti ==
+
+VISTAS_DBA_EN_DICTIONARY
+------------------------
+                      16
+-- Con SELECT_CATALOG_ROLE se pregunta a los comentarios del catálogo (DBA_TAB_COMMENTS):
+
+TABLE_NAME                     COMMENTS                                                                        
+------------------------------ --------------------------------------------------------------------------------
+DBA_RESUMABLE                  Resumable session information in the system                                     
+DBA_TS_QUOTAS                  Tablespace quotas for all users                                                 
+== 5. ¿Y qué columnas tiene? (DBA_COL_COMMENTS; MAX_BYTES = -1 significa ilimitada) ==
+
+COLUMN_NAME      COMMENTS                                                                        
+---------------- --------------------------------------------------------------------------------
+BLOCKS           Number of ORACLE blocks charged to the user                                     
+BYTES            Number of bytes charged to the user                                             
+DROPPED          Whether the tablespace has been dropped                                         
+MAX_BLOCKS       User's quota in ORACLE blocks.  NULL if no limit                                
+MAX_BYTES        User's quota in bytes.  NULL if no limit                                        
+TABLESPACE_NAME  Tablespace name                                                                 
+USERNAME         User with resource rights on the tablespace                                     
+== 6. ¿A qué contenedores puede mirar C##OPS_RO? (CONTAINER_DATA) ==
+
+USERNAME   DEFAULT_ATTR OWNER    OBJECT_NAME  ALL_CONTAINERS
+---------- ------------ -------- ------------ --------------
+C##OPS_RO  Y                                  Y             

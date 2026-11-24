@@ -1,0 +1,93 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:36:43Z origen=04-tres-miradas
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7424567
+################ Mirada 1 · C##OPS_RO en CDB$ROOT (con CONTAINER_DATA = ALL) ################
+
+USUARIO        CONTENEDOR
+-------------- ----------
+C##OPS_RO      CDB$ROOT  
+
+VISTA                               FILAS
+------------------------------ ----------
+USER_TABLES (lo mío)                    0
+ALL_TABLES de ADMIN_ACADEMIA            0
+ALL_USERS (los que veo)                37
+-- DBA_USERS (todo el contenedor actual):
+
+ DBA_USERS
+----------
+        37
+-- CDB_USERS por contenedor (todos los contenedores que tengo permitido ver):
+
+    CON_ID  CDB_USERS
+---------- ----------
+         1         37
+         3         47
+-- V$DATAFILE (datafiles visibles):
+
+ DATAFILES
+----------
+        17
+################ Mirada 2 · C##OPS_RO entrando por el servicio freepdb1 ################
+
+USUARIO        CONTENEDOR
+-------------- ----------
+C##OPS_RO      FREEPDB1  
+
+VISTA                               FILAS
+------------------------------ ----------
+USER_TABLES (lo mío)                    0
+ALL_TABLES de ADMIN_ACADEMIA            0
+ALL_USERS (los que veo)                47
+-- DBA_USERS (todo el contenedor actual):
+
+ DBA_USERS
+----------
+        47
+-- CDB_USERS por contenedor (todos los contenedores que tengo permitido ver):
+
+    CON_ID  CDB_USERS
+---------- ----------
+         3         47
+-- V$DATAFILE (datafiles visibles):
+
+ DATAFILES
+----------
+        10
+################ Mirada 3 · APP_ACADEMIA por academia_app (cuenta de aplicación, sin catálogo) ################
+
+USUARIO        CONTENEDOR
+-------------- ----------
+APP_ACADEMIA   FREEPDB1  
+
+VISTA                               FILAS
+------------------------------ ----------
+USER_TABLES (lo mío)                    0
+ALL_TABLES de ADMIN_ACADEMIA            1
+ALL_USERS (los que veo)                47
+-- DBA_USERS (todo el contenedor actual):
+
+Error starting at line : 15 File @ file:/home/capit/oracle-database-lab./scripts/lab6/04-tres-miradas.sql
+In command -
+SELECT COUNT(*) AS dba_users FROM dba_users
+Error at Command Line : 15 Column : 35 File @ file:/home/capit/oracle-database-lab./scripts/lab6/04-tres-miradas.sql
+Error report -
+SQL Error: ORA-00942: table or view "SYS"."DBA_USERS" does not exist
+Help: https://docs.oracle.com/error-help/db/ora-00942/
+-- CDB_USERS por contenedor (todos los contenedores que tengo permitido ver):
+
+Error starting at line : 17 File @ file:/home/capit/oracle-database-lab./scripts/lab6/04-tres-miradas.sql
+In command -
+SELECT con_id, COUNT(*) AS cdb_users FROM cdb_users GROUP BY con_id ORDER BY con_id
+Error at Command Line : 17 Column : 43 File @ file:/home/capit/oracle-database-lab./scripts/lab6/04-tres-miradas.sql
+Error report -
+SQL Error: ORA-00942: table or view "SYS"."CDB_USERS" does not exist
+Help: https://docs.oracle.com/error-help/db/ora-00942/
+-- V$DATAFILE (datafiles visibles):
+
+Error starting at line : 19 File @ file:/home/capit/oracle-database-lab./scripts/lab6/04-tres-miradas.sql
+In command -
+SELECT COUNT(*) AS datafiles FROM v$datafile
+Error at Command Line : 19 Column : 35 File @ file:/home/capit/oracle-database-lab./scripts/lab6/04-tres-miradas.sql
+Error report -
+SQL Error: ORA-00942: table or view "SYS"."V_$DATAFILE" does not exist
+Help: https://docs.oracle.com/error-help/db/ora-00942/
