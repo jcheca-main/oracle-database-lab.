@@ -1,0 +1,68 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:47:12Z origen=05-resumable
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7425705
+== 0. Permisos TEMPORALES para la prueba (deuda de acceso que se paga en la Parte G) y cuota de partida de 2 MB ==
+
+Session altered.
+
+
+Grant succeeded.
+
+
+Grant succeeded.
+
+
+User altered.
+
+== 1. La aplicación lanza la carga con RESUMABLE (espera hasta 180 s si le falta espacio) ==
+== 2. El DBA (12 s después): la sentencia no ha fallado, está SUSPENDIDA ==
+
+NAME		 STATUS        TIMEOUT SUSPEND_TIME	    ERROR_MSG
+---------------- ---------- ---------- -------------------- ----------------------------------------------------------------------
+carga-historico  SUSPENDED	   180 11/24/26 17:47:12    ORA-01536: space quota exceeded for tablespace 'TBS_ACADEMIA_HIST'
+
+       SID USERNAME	 EVENT						  SECONDS_IN_WAIT
+---------- ------------- ------------------------------------------------ ---------------
+       219 APP_ACADEMIA  statement suspended, wait error to be cleared			0
+FREEPDB1(3):statement in resumable session 'carga-historico' was suspended due to
+== 3. Menor cambio útil: ampliar la CUOTA del dueño (no el tablespace, que tiene sitio de sobra) ==
+
+Session altered.
+
+
+User altered.
+
+-- Lo que vio la aplicación: la carga terminó, con una pausa en medio --
+
+Session altered.
+
+
+INICIO
+--------
+17:47:12
+
+1 row selected.
+
+
+20000 rows created.
+
+
+Commit complete.
+
+
+FIN
+--------
+17:47:27
+
+1 row selected.
+
+FREEPDB1(3):statement in resumable session 'carga-historico' was suspended due to
+FREEPDB1(3):statement in resumable session 'carga-historico' was resumed
+== 4. Validación: filas cargadas y cuota consumida ==
+
+     FILAS
+----------
+     20000
+
+USERNAME   TABLESPACE_NAME	USADO_MB   CUOTA_MB
+---------- ------------------ ---------- ----------
+CARGA_HIST TBS_ACADEMIA_HIST	      23	 30

@@ -1,0 +1,49 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:48:13Z origen=05-hwm-shrink
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7425999
+
+Session altered.
+
+== 1. Antes: 20 000 filas ==
+
+MOMENTO 		    FILAS    BLOQUES	     MB
+---------------------- ---------- ---------- ----------
+antes del DELETE	    20000	2944	     23
+
+1 row selected.
+
+== 2. Se borra el 90 % (el histórico antiguo) ==
+
+18000 rows deleted.
+
+
+Commit complete.
+
+
+MOMENTO 		    FILAS    BLOQUES	     MB
+---------------------- ---------- ---------- ----------
+tras el DELETE		     2000	2944	     23
+
+1 row selected.
+
+-- El segmento NO ha encogido: los bloques siguen por debajo de la HWM (medio vacíos) y la cuota sigue consumida
+== 3. Compactar en línea: SHRINK SPACE mueve filas (por eso exige ROW MOVEMENT) y baja la HWM ==
+
+Table altered.
+
+
+Table altered.
+
+
+MOMENTO 		    FILAS    BLOQUES	     MB
+---------------------- ---------- ---------- ----------
+tras SHRINK SPACE	     2000	 304	    2.4
+
+1 row selected.
+
+
+USERNAME   CUOTA_USADA_MB
+---------- --------------
+CARGA_HIST	      2.4
+
+1 row selected.
+

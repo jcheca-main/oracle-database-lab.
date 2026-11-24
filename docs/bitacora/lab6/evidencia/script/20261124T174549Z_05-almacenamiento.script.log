@@ -1,0 +1,112 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:45:49Z origen=05-almacenamiento
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7425123
+
+Session altered.
+
+== 1. Un tablespace nuevo con todas sus decisiones: ruta explícita, tamaño inicial y crecimiento CON TECHO ==
+TBS_ACADEMIA_HIST creado
+
+PL/SQL procedure successfully completed.
+
+
+TABLESPACE_NAME    BIG EXTENT_MAN ALLOCATIO SEGMEN
+------------------ --- ---------- --------- ------
+TBS_ACADEMIA	   YES LOCAL	  SYSTEM    AUTO
+TBS_ACADEMIA_HIST  YES LOCAL	  SYSTEM    AUTO
+
+2 rows selected.
+
+== 2. Medir bien: asignado, libre dentro de lo asignado y máximo alcanzable (no son lo mismo) ==
+
+TABLESPACE_NAME    ASIGNADO_MB	 LIBRE_MB     MAX_MB
+------------------ ----------- ---------- ----------
+TBS_ACADEMIA		   100	     76.8	1024
+TBS_ACADEMIA_HIST	    10	      3.9	  40
+
+2 rows selected.
+
+
+TABLESPACE_NAME    BLOQUES_USADOS BLOQUES_MAX PCT_SOBRE_MAX
+------------------ -------------- ----------- -------------
+TBS_ACADEMIA		     2976      131072	       2.27
+TBS_ACADEMIA_HIST	      776	 5120	      15.16
+
+2 rows selected.
+
+== 3. Los tablespaces no crecen solos: crecen sus segmentos. ¿Quién ocupa TBS_ACADEMIA? ==
+
+SEGMENT_NAME		   SEGMENT_TY	      MB     BLOCKS    EXTENTS
+-------------------------- ---------- ---------- ---------- ----------
+ACA_MATRICULAS		   TABLE	       3	384	    18
+UQ_ACA_MATRICULA_UNICA	   INDEX	       3	384	    18
+ACA_ESTUDIANTES 	   TABLE	       2	256	    17
+IDX_ACA_MAT_EST 	   INDEX	       2	256	    17
+SYS_C008673		   INDEX	       2	256	    17
+UQ_ACA_EMAIL		   INDEX	       2	256	    17
+
+6 rows selected.
+
+== 4. Un esquema de solo esquema SIN cuota en su tablespace por defecto ==
+
+PL/SQL procedure successfully completed.
+
+
+Table created.
+
+-- La tabla existe... pero todavía no tiene segmento (creación diferida): no ocupa nada
+
+SEGMENTOS_DE_CARGA_HIST
+-----------------------
+		      0
+
+1 row selected.
+
+-- Primer INSERT: ahora sí hace falta un segmento, y el dueño no tiene cuota (error esperado: ORA-01950)
+INSERT INTO carga_hist.registro (id, relleno) VALUES (1, 'x')
+                       *
+ERROR at line 1:
+ORA-01950: The user CARGA_HIST has insufficient quota on tablespace TBS_ACADEMIA_HIST.
+Help: https://docs.oracle.com/error-help/db/ora-01950/
+
+
+== 5. Cuota de 2 MB: la paga el DUEÑO del segmento, aunque inserte otro (error esperado: ORA-01536) ==
+
+User altered.
+
+INSERT INTO carga_hist.registro (id, relleno) SELECT level, 'x' FROM dual CONNECT BY level <= 5000
+                       *
+ERROR at line 1:
+ORA-01536: space quota exceeded for tablespace 'TBS_ACADEMIA_HIST'
+Help: https://docs.oracle.com/error-help/db/ora-01536/
+
+
+
+Rollback complete.
+
+
+USERNAME   TABLESPACE_NAME	   BYTES  MAX_BYTES	BLOCKS MAX_BLOCKS
+---------- ------------------ ---------- ---------- ---------- ----------
+CARGA_HIST TBS_ACADEMIA_HIST	 2097152    2097152	   256	      256
+
+1 row selected.
+
+== 6. Las cuotas no se aplican al tablespace temporal (error esperado: ORA-30041) ==
+ALTER USER carga_hist QUOTA 10M ON temp
+*
+ERROR at line 1:
+ORA-30041: Cannot grant quota on the tablespace
+Help: https://docs.oracle.com/error-help/db/ora-30041/
+
+
+== 7. Que avise ANTES de llenarse: umbral de alerta para TBS_ACADEMIA_HIST (en la Parte B salía NONE) ==
+
+PL/SQL procedure successfully completed.
+
+
+TABLESPACE_NAME    OP		AVISO  CRITICO
+------------------ ------------ ------ -------
+TBS_ACADEMIA	   NONE
+TBS_ACADEMIA_HIST  GE		80     95
+
+2 rows selected.
+
