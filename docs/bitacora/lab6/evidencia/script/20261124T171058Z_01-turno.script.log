@@ -1,0 +1,38 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:10:58Z origen=turno
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:02:09 scn=7415956
+== 1. ¿Dónde estoy y quién soy? ==
+
+CONTENEDOR   USUARIO      AHORA               
+------------ ------------ --------------------
+CDB$ROOT     C##OPS_RO    2026-11-24 17:11 UTC
+== 2. ¿Instancia y base están como deben? ==
+
+INSTANCIA  ESTADO       LOGINS     ARRANQUE        
+---------- ------------ ---------- ----------------
+FREE       OPEN         ALLOWED    2026-11-24 17:02
+
+NAME       OPEN_MODE  LOG_MODE  
+---------- ---------- ----------
+FREE       READ WRITE ARCHIVELOG
+== 3. ¿Están abiertas las PDB? ==
+
+    CON_ID NAME       OPEN_MODE  RESTRICTED
+---------- ---------- ---------- ----------
+         2 PDB$SEED   READ ONLY  NO        
+         3 FREEPDB1   READ WRITE NO        
+== 4. ¿Cuántos errores ORA- hay en el alert log en las últimas 24 h? (compáralo con tu línea base) ==
+
+ERRORES_ORA_24H
+---------------
+              4
+== 5. ¿Algún tablespace por encima del 85 % de su máximo? (vacío = bien) ==
+== 6. ¿Hay sesiones bloqueadas ahora mismo? ==
+
+SESIONES_BLOQUEADAS
+-------------------
+                  0
+== 7. ¿Hay alertas del servidor pendientes? ==
+
+ALERTAS_PENDIENTES
+------------------
+                 0

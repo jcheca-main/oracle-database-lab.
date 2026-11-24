@@ -1,0 +1,53 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:12:27Z origen=01-automatizacion
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:02:09 scn=7416033
+SQL Format Cleared
+== 1. Tareas de mantenimiento automático (AutoTask) ==
+
+CLIENT_NAME                      STATUS   WINDOW_GROUP    
+-------------------------------- -------- ----------------
+auto optimizer stats collection  ENABLED  ORA$AT_WGRP_OS  
+auto space advisor               ENABLED  ORA$AT_WGRP_SA  
+sql tuning advisor               ENABLED  ORA$AT_WGRP_SQ  
+== 2. Ventanas de mantenimiento: cuándo y cuántas horas duran ==
+
+WINDOW_NAME       REPEAT_INTERVAL                                                        HORAS ENABLED
+----------------- ---------------------------------------------------------------------- ----- -------
+FRIDAY_WINDOW     freq=daily;byday=FRI;byhour=22;byminute=0;bysecond=0                       4 TRUE   
+MONDAY_WINDOW     freq=daily;byday=MON;byhour=22;byminute=0;bysecond=0                       4 TRUE   
+SATURDAY_WINDOW   freq=daily;byday=SAT;byhour=6;byminute=0;bysecond=0                       20 TRUE   
+SUNDAY_WINDOW     freq=daily;byday=SUN;byhour=6;byminute=0;bysecond=0                       20 TRUE   
+THURSDAY_WINDOW   freq=daily;byday=THU;byhour=22;byminute=0;bysecond=0                       4 TRUE   
+TUESDAY_WINDOW    freq=daily;byday=TUE;byhour=22;byminute=0;bysecond=0                       4 TRUE   
+WEDNESDAY_WINDOW  freq=daily;byday=WED;byhour=22;byminute=0;bysecond=0                       4 TRUE   
+WEEKEND_WINDOW    freq=daily;byday=SAT;byhour=0;byminute=0;bysecond=0                       48 FALSE  
+WEEKNIGHT_WINDOW  freq=daily;byday=MON,TUE,WED,THU,FRI;byhour=22;byminute=0;bysecond=0       8 FALSE  
+== 3. Umbrales de las alertas de espacio (MMON) que rigen EN ESTA PDB ==
+(NONE = ningún umbral: MMON no avisará aunque el tablespace se llene; se arregla en la Parte F)
+
+TABLESPACE     OP           AVISO         CRITICO      
+-------------- ------------ ------------- -------------
+SYSTEM         NONE                                    
+TBS_ACADEMIA   NONE                                    
+TBS_TIENDASUR  NONE                                    
+TEMP           DO NOT CHECK (automático)  0            
+UNDOTBS1       DO NOT CHECK (automático)  0            
+USERS          NONE                                    
+== 4. AWR: cada cuánto toma fotos y cuánto las guarda ==
+
+SNAP_INTERVAL        RETENTION           
+-------------------- --------------------
++00 01:00:00.000000  +08 00:00:00.000000 
+
+NAME                             VALOR               
+-------------------------------- --------------------
+statistics_level                 TYPICAL             
+control_management_pack_access   DIAGNOSTIC+TUNING   
+== 5. Trabajos del Scheduler: cuántos hay y cuántos fallaron en 7 días ==
+
+OWNER        TRABAJOS HABILITADOS
+---------- ---------- -----------
+SYS                24          12
+ORDS_METAD          1           1
+ATA                              
+
+(vacío en la última consulta = ningún trabajo falló en 7 días)
