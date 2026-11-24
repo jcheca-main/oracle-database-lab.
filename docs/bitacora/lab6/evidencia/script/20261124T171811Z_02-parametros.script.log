@@ -1,0 +1,89 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:18:11Z origen=02-parametros
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:02:09 scn=7416969
+== 1. ¿Con qué archivo de parámetros arrancó la instancia? ==
+
+NAME		       VALUE
+---------------------- --------------------------------------------
+spfile		       /opt/oracle/product/26ai/dbhomeFree/dbs/spfi
+		       leFREE.ora
+
+
+1 row selected.
+
+== 2. Red de seguridad antes de tocar nada: el último estado bueno, en texto ==
+
+File created.
+
+
+File created.
+
+== 3. Tipos de parámetro: estático (FALSE), dinámico inmediato, dinámico diferido; y si la PDB puede tener el suyo ==
+
+NAME		       VALUE					    ISSYS_MODIFIABLE ISPDB_MODIFIABLE
+---------------------- -------------------------------------------- ---------------- ----------------
+sort_area_size	       65536					    DEFERRED	     TRUE
+control_files	       /opt/oracle/oradata/FREE/control01.ctl, /opt FALSE	     FALSE
+		       /oracle/oradata/FREE/control02.ctl, /opt/ora
+		       cle/oradata/FREE/control03.ctl
+
+db_files	       200					    FALSE	     TRUE
+db_recovery_file_dest_ 4294967296				    IMMEDIATE	     FALSE
+size
+
+resumable_timeout      0					    IMMEDIATE	     TRUE
+undo_retention	       900					    IMMEDIATE	     TRUE
+
+6 rows selected.
+
+== 4. Un parámetro ESTÁTICO no se puede cambiar en memoria (error esperado: ORA-02095) ==
+ALTER SYSTEM SET db_files = 250 SCOPE = MEMORY
+                 *
+ERROR at line 1:
+ORA-02095: specified initialization parameter cannot be modified
+Help: https://docs.oracle.com/error-help/db/ora-02095/
+
+
+== 5. Con SCOPE = SPFILE se acepta... pero solo vale en el próximo arranque ==
+
+ORIGEN		  VALUE 				       ISSPECIFIED
+----------------- -------------------------------------------- -----------
+SPFILE (antes)	  (sin fijar)				       FALSE
+
+1 row selected.
+
+
+System altered.
+
+
+ORIGEN		  VALUE 				       ISSPECIFIED
+----------------- -------------------------------------------- -----------
+SPFILE (archivo)  250					       TRUE
+MEMORIA (en uso)  200
+
+2 rows selected.
+
+== 6. Vuelta atrás. db_files NO estaba fijado (la copia del paso 2 no lo tiene): se deshace con RESET ==
+
+System altered.
+
+
+ORIGEN		  VALUE 				       ISSPECIFIED
+----------------- -------------------------------------------- -----------
+SPFILE (después)  (sin fijar)                                  FALSE
+
+1 row selected.
+
+== 7. Desde una PDB no se cambia un parámetro del CDB (error esperado: ORA-65040) ==
+
+Session altered.
+
+ALTER SYSTEM SET processes = 250 SCOPE = SPFILE
+*
+ERROR at line 1:
+ORA-65040: Operation is not allowed from within a pluggable database.
+Help: https://docs.oracle.com/error-help/db/ora-65040/
+
+
+
+Session altered.
+
