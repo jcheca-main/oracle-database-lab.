@@ -1,0 +1,78 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:58:25Z origen=06-cascada
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7429957
+== 1. Montaje: el DBA concede a U6_A un privilegio de SISTEMA con ADMIN OPTION y uno de OBJETO con GRANT OPTION ==
+
+Session altered.
+
+
+PL/SQL procedure successfully completed.
+
+
+User created.
+
+
+User created.
+
+
+Grant succeeded.
+
+
+Grant succeeded.
+
+== 2. U6_A reparte lo recibido a U6_B ==
+
+Grant succeeded.
+
+
+Grant succeeded.
+
+== 3. Antes de revocar a U6_A ==
+
+Session altered.
+
+
+GRANTEE PRIVILEGE	ADM
+------- --------------- ---
+U6_A	CREATE SESSION	YES
+U6_B	CREATE SESSION	NO
+
+GRANTEE GRANTOR 	TABLE_NAME	 PRIVILEGE	 GRA
+------- --------------- ---------------- --------------- ---
+U6_A	ADMIN_ACADEMIA	ACA_ASIGNATURAS  SELECT 	 YES
+U6_B	U6_A		ACA_ASIGNATURAS  SELECT 	 NO
+
+PRIVILEGIOS_DE_OBJETO
+---------------------
+		    2
+== 4. El DBA revoca a U6_A los dos privilegios ==
+
+Session altered.
+
+
+Revoke succeeded.
+
+
+Revoke succeeded.
+
+== 5. Después: el de SISTEMA de U6_B sobrevive; el de OBJETO de U6_B cae en cascada ==
+
+Session altered.
+
+
+GRANTEE PRIVILEGE	ADM
+------- --------------- ---
+U6_B	CREATE SESSION	NO
+
+PRIVILEGIOS_DE_OBJETO
+---------------------
+		    0
+== 6. Limpieza: los usuarios de prueba se borran (el ciclo de vida también incluye la baja) ==
+
+Session altered.
+
+
+User dropped.
+
+
+User dropped.
+

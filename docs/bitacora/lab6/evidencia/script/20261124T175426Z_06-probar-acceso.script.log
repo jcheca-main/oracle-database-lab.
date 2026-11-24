@@ -1,0 +1,106 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:54:27Z origen=06-probar-acceso
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7429024
+== 1. ANA_GARCIA (persona de secretaría) entra por el servicio freepdb1 ==
+-- Roles activos y privilegios de sistema de la sesión
+
+ROLE
+--------------------------
+ROL_LECTURA_ACADEMIA
+ROL_SECRETARIA_ACADEMIA
+
+2 rows selected. 
+
+
+PRIVILEGE
+--------------------------
+CREATE SESSION
+
+1 row selected. 
+
+-- Lee Academia por el privilegio de esquema (también aca_matriculas, que nadie le concedió por nombre)
+
+ESTUDIANTES
+-----------
+      20000
+
+1 row selected. 
+
+
+MATRICULAS
+----------
+     60000
+
+1 row selected. 
+
+-- Puede cambiar el ESTADO de un estudiante...
+
+1 row updated.
+
+
+Rollback complete.
+
+-- ...pero no su nombre (error esperado: falta el privilegio UPDATE sobre esa columna)
+
+Error starting at line : 18 File @ file:/home/capit/oracle-database-lab./scripts/lab6/06-sesion-ana.sql
+In command -
+UPDATE admin_academia.aca_estudiantes SET nombres = 'Otro' WHERE estudiante_id = 105
+Error at Command Line : 18 Column : 23 File @ file:/home/capit/oracle-database-lab./scripts/lab6/06-sesion-ana.sql
+Error report -
+SQL Error: ORA-41900: missing UPDATE privilege on "ADMIN_ACADEMIA"."ACA_ESTUDIANTES"
+Help: https://docs.oracle.com/error-help/db/ora-41900/
+-- ...ni borrar (error esperado)
+
+Error starting at line : 20 File @ file:/home/capit/oracle-database-lab./scripts/lab6/06-sesion-ana.sql
+In command -
+DELETE FROM admin_academia.aca_estudiantes WHERE estudiante_id = 105
+Error at Command Line : 20 Column : 28 File @ file:/home/capit/oracle-database-lab./scripts/lab6/06-sesion-ana.sql
+Error report -
+SQL Error: ORA-41900: missing DELETE privilege on "ADMIN_ACADEMIA"."ACA_ESTUDIANTES"
+Help: https://docs.oracle.com/error-help/db/ora-41900/
+
+Rollback complete.
+
+== 2. APP_ACADEMIA sigue funcionando tras pagar la deuda de acceso ==
+
+ROLE
+--------------------
+ROL_APP_ACADEMIA
+
+1 row selected. 
+
+
+ESTUDIANTES
+-----------
+      17600
+
+1 row selected. 
+
+
+1 row updated.
+
+
+Rollback complete.
+
+-- Ya no puede insertar en el histórico (el permiso temporal de la Parte F se retiró): error esperado
+
+Error starting at line : 12 File @ file:/home/capit/oracle-database-lab./scripts/lab6/06-app-sigue.sql
+In command -
+INSERT INTO carga_hist.registro (id, relleno) VALUES (-1, 'x')
+Error at Command Line : 12 Column : 24 File @ file:/home/capit/oracle-database-lab./scripts/lab6/06-app-sigue.sql
+Error report -
+SQL Error: ORA-00942: table or view "CARGA_HIST"."REGISTRO" does not exist
+Help: https://docs.oracle.com/error-help/db/ora-00942/
+== 3. Tres contraseñas erróneas y después la correcta ==
+ORA-01017: invalid credential or not authorized; logon denied
+ORA-01017: invalid credential or not authorized; logon denied
+ORA-01017: invalid credential or not authorized; logon denied
+ORA-28000: The account is locked; login denied.
+
+USERNAME     ACCOUNT_STATUS   LOCK_DATE
+------------ ---------------- ------------------
+ANA_GARCIA   LOCKED(TIMED)    24-NOV-26
+-- El DBA atiende la incidencia (en el mundo real: tras confirmar la identidad de Ana por otro canal)
+
+USERNAME     ACCOUNT_STATUS
+------------ ----------------
+ANA_GARCIA   OPEN

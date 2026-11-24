@@ -1,0 +1,113 @@
+== EVIDENCIA alumno=E017 hora=2026-11-24T17:53:00Z origen=06-gobierno-acceso
+== EVIDENCIA contenedor=f49e437017b9 dbid=1509902213 arranque=2026-11-24T17:21:15 scn=7428920
+
+Session altered.
+
+== 1. No supongas los valores por defecto: consúltalos (perfil DEFAULT, parámetros de contraseña) ==
+
+RESOURCE_NAME		   LIMIT
+-------------------------- --------------------------
+FAILED_LOGIN_ATTEMPTS	   10
+INACTIVE_ACCOUNT_TIME	   365
+PASSWORD_GRACE_TIME	   7
+PASSWORD_LIFE_TIME	   180
+PASSWORD_LOCK_TIME	   1
+PASSWORD_REUSE_MAX	   UNLIMITED
+PASSWORD_REUSE_TIME	   UNLIMITED
+PASSWORD_ROLLOVER_TIME	   0
+PASSWORD_VERIFY_FUNCTION   NULL
+
+9 rows selected.
+
+== 2. Un perfil para PERSONAS (bloqueo de 1 minuto: solo en laboratorio) ==
+Perfil PRF_PERSONAS actualizado
+
+PL/SQL procedure successfully completed.
+
+-- La función de verificación rechaza una contraseña débil (error esperado: ORA-28003)
+CREATE USER prueba_debil IDENTIFIED BY "corta" PROFILE prf_personas
+*
+ERROR at line 1:
+ORA-28003: The password chosen did not meet the required complexity rules set by your organization.
+ORA-20000: password length less than 8 characters
+Help: https://docs.oracle.com/error-help/db/ora-28003/
+
+
+== 3. Roles FUNCIONALES: lo que se da por rol se administra; lo que se da disperso se persigue ==
+
+PL/SQL procedure successfully completed.
+
+
+Grant succeeded.
+
+
+Grant succeeded.
+
+
+Grant succeeded.
+
+
+Grant succeeded.
+
+== 4. Alta (joiner): una cuenta NOMINAL para una persona de secretaría ==
+
+PL/SQL procedure successfully completed.
+
+
+Grant succeeded.
+
+== 5. Pagar la deuda de acceso: APP_ACADEMIA pasa de privilegios sueltos a UN rol ==
+
+PL/SQL procedure successfully completed.
+
+
+Grant succeeded.
+
+== 6. Resultado: quién tiene qué (roles, privilegios de objeto, de esquema y de sistema) ==
+
+GRANTEE 		 GRANTED_ROLE		  DEFAULT
+------------------------ ------------------------ -------
+ANA_GARCIA		 ROL_SECRETARIA_ACADEMIA  YES
+APP_ACADEMIA		 ROL_APP_ACADEMIA	  YES
+ROL_SECRETARIA_ACADEMIA  ROL_LECTURA_ACADEMIA	  YES
+
+3 rows selected.
+
+
+GRANTEE 		 PRIVILEGE	    SCHEMA
+------------------------ ------------------ ---------------
+ROL_LECTURA_ACADEMIA	 SELECT ANY TABLE   ADMIN_ACADEMIA
+
+1 row selected.
+
+
+GRANTEE 		 TABLE_NAME	  PRIVILEGE
+------------------------ ---------------- ------------------
+ROL_APP_ACADEMIA	 ACA_ESTUDIANTES  SELECT
+ROL_APP_ACADEMIA	 ACA_ESTUDIANTES  UPDATE
+
+2 rows selected.
+
+
+GRANTEE 		 TABLE_NAME	  COLUMN_N PRIVILEGE
+------------------------ ---------------- -------- ------------------
+ROL_SECRETARIA_ACADEMIA  ACA_ESTUDIANTES  ESTADO   UPDATE
+
+1 row selected.
+
+
+GRANTEE 		 PRIVILEGE
+------------------------ ------------------
+ANA_GARCIA		 CREATE SESSION
+APP_ACADEMIA		 CREATE SESSION
+
+2 rows selected.
+
+
+USERNAME      PROFILE	    ACCOUNT_STATUS   AUTHENTICATION_TYPE
+------------- ------------- ---------------- -------------------
+ANA_GARCIA    PRF_PERSONAS  OPEN	     PASSWORD
+APP_ACADEMIA  DEFAULT	    OPEN	     PASSWORD
+
+2 rows selected.
+
