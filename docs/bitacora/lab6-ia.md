@@ -18,19 +18,60 @@ CÓMO SE RELLENA (léelo y borra este comentario si quieres; el script de evalua
   dices para qué lo usaste y adjuntas aquí el código y el prompt LITERAL.
 -->
 
+ He utilizado la IA como ayuda para que me valla guiando a la hora de realizar la practica, que me 
+recomendara partes de codigo o si tenia algun tipo de problema con algun script en especifico. Para
+asi poder realizar la practica. 
 
-
-## Entrada 1
+## Entrada 1 -> INC-601
 - **Herramienta:** ChatGPT 
 - **Prompt (literal, copiado tal cual):**
 ```text
-
+	para la INC-601 que codigo me recomiendas poner?
 ```
 - **Código recibido (el fragmento, o la ruta del archivo donde está):**
 ```sql
-
+	ALTER SYSTEM KILL SESSION '55,44522' IMMEDIATE;
 ```
-- **Dónde lo usé (parte, script o pregunta):** 
-- **Propósito (para qué lo necesitaba):** 
-- **Qué hace (con mis palabras; línea a línea si es SQL corto):** 
-- **Evidencia de ejecución (archivo de docs/bitacora/lab6/evidencia con mi cabecera):** 
+- **Dónde lo usé (parte, script o pregunta):** para la parte de las incidencias 
+- **Propósito (para qué lo necesitaba):** ayuda
+- **Qué hace (con mis palabras; línea a línea si es SQL corto):** elimina una session especifica 
+- **Evidencia de ejecución (archivo de docs/bitacora/lab6/evidencia con mi cabecera):**  docs/bitacora/lab6/evidencia/script/20261124T182211Z_08-inc601-accion.script.log
+
+## Entrada 2 -> INC-602
+- **Herramienta:** ChatGPT
+- **Prompt (literal, copiado tal cual):**
+```text
+        para la INC-602 que codigo es entonces si no es ni uno ni otro?
+```
+- **Código recibido (el fragmento, o la ruta del archivo donde está):**
+```sql
+        SELECT estudiante_id, estado FROM admin_academia.aca_estudiantes WHERE estudiante_id = 101;
+```
+- **Dónde lo usé (parte, script o pregunta):** para la parte de las incidencias
+- **Propósito (para qué lo necesitaba):** ayuda
+- **Qué hace (con mis palabras; línea a línea si es SQL corto):** hace una consulta sobre un estudiante en especifico
+- **Evidencia de ejecución (archivo de docs/bitacora/lab6/evidencia con mi cabecera):**  docs/bitacora/lab6/evidencia/script/20261124T182408Z_08-inc601-validar.script.log
+
+## Entrada 3 -> INC-603
+- **Herramienta:** ChatGPT
+- **Prompt (literal, copiado tal cual):**
+```text
+        y la INC-603 que dos instrucciones le hago entonces?
+```
+- **Código recibido (el fragmento, o la ruta del archivo donde está):**
+```sql
+        ALTER SESSION SET CONTAINER = FREEPDB1;
+        ALTER USER app_academia ACCOUNT UNLOCK;
+```
+- **Dónde lo usé (parte, script o pregunta):** para la parte de las incidencias
+- **Propósito (para qué lo necesitaba):** ayuda
+- **Qué hace (con mis palabras; línea a línea si es SQL corto):** Desbloquea a un usuario de una sesion.
+- **Evidencia de ejecución (archivo de docs/bitacora/lab6/evidencia con mi cabecera):**  docs/bitacora/lab6/evidencia/script/20261124T183218Z_08-inc603-desbloqueo.script.log
+
+
+
+
+
+
+
+
